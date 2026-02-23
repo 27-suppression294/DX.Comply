@@ -7,15 +7,26 @@
 ---
 
 ## 1. Context & Background (CRA Status)
-The EU **Cyber Resilience Act (CRA)** has been adopted and is in force. Most obligations apply after
-a transition period (from **late 2027**), with some requirements (e.g. reporting obligations for
-actively exploited vulnerabilities) taking effect earlier. For manufacturers of "products with
-digital elements" this means, among other things: secure development processes, vulnerability
+**Regulation (EU) 2024/2847** (Cyber Resilience Act) entered into force on **10 December 2024**.
+It establishes horizontal cybersecurity requirements for all "products with digital elements"
+placed on the EU market. Key obligations include: secure development processes, vulnerability
 management, update provision, and **transparency about software components (SBOM)**.
-DX.Comply addresses these transparency and process requirements for Delphi/RAD Studio projects.
 
-> Note: Specific deadlines and details may be further defined through implementing acts.
-> DX.Comply will support versioned CRA profiles.
+**Timeline (Article 71):**
+- **11 September 2026** — Vulnerability and incident reporting obligations (Article 14) begin.
+  Applies to all products already on the market.
+- **11 June 2026** — Conformity assessment bodies must notify competent authorities.
+- **11 December 2027** — Full application date. All products placed on the EU market must comply.
+
+**SBOM requirement (Annex I, Part II, point 1):** Manufacturers must identify and document
+software components — at minimum all top-level dependencies, including their names, versions,
+and any known vulnerabilities.
+
+DX.Comply addresses the SBOM transparency requirement for Delphi/RAD Studio projects.
+It does not cover vulnerability reporting (Article 14), CE marking, or conformity assessment.
+
+> Note: Implementing acts may further specify technical requirements.
+> DX.Comply will support versioned CRA profiles to adapt as standards evolve.
 
 ---
 

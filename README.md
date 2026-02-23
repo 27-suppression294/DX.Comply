@@ -19,13 +19,17 @@ Manually maintaining such a list is tedious and error-prone — especially acros
 
 ## The EU Cyber Resilience Act (CRA) — what it means for you
 
-The EU Cyber Resilience Act (CRA) is now in force. Most obligations apply from **late 2027**. If you sell software or hardware with a digital component in the EU — as an ISV, product company, or enterprise — you will be required to:
+**Regulation (EU) 2024/2847** (Cyber Resilience Act) entered into force on **10 December 2024**. If you place software or hardware with a digital component on the EU market — as an ISV, product company, or enterprise — you will be required to:
 
-- document the software components in your product (**SBOM**)
+- document the software components in your product (**SBOM** — see below)
 - manage and disclose vulnerabilities
 - provide security updates throughout the support lifecycle
 
-**DX.Comply handles the SBOM part.** It generates a machine-readable, standards-compliant *Software Bill of Materials* directly from your Delphi project — suitable for audits, customers, and regulatory submissions.
+**Key dates:**
+- **11 September 2026** — Vulnerability and incident reporting obligations begin (Article 14). Applies to all products already on the market.
+- **11 December 2027** — Full CRA application date (Article 71). All products placed on the EU market must fully comply.
+
+**DX.Comply handles the SBOM part.** The CRA requires manufacturers to identify and document software components — at minimum all top-level dependencies (Annex I, Part II, point 1). DX.Comply generates a machine-readable, standards-compliant *Software Bill of Materials* directly from your Delphi project — suitable for audits, customers, and regulatory submissions.
 
 > **SBOM** (Software Bill of Materials) is simply a structured list of every component, file, and dependency in your software, including their versions and checksums. Think of it as the ingredient list on a food label — for your application.
 
@@ -169,8 +173,20 @@ The **Pro edition** is available as a commercial subscription.
 
 ---
 
+## Official EU Sources
+
+All CRA compliance claims in this project are based on the following official EU publications:
+
+| Source | Link |
+|--------|------|
+| Regulation (EU) 2024/2847 — full text (EUR-Lex) | https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng |
+| EC Digital Strategy — CRA overview | https://digital-strategy.ec.europa.eu/en/policies/cyber-resilience-act |
+| ENISA — SBOM Landscape Analysis | https://www.enisa.europa.eu/publications/sbom-analysis |
+
+---
+
 ## About
 
-DX.Comply is developed by **Olaf Monien** as part of the [DX component suite](https://github.com/omonien).  
+DX.Comply is developed by **Olaf Monien** as part of the [DX component suite](https://github.com/omonien).
 Copyright © 2026 Olaf Monien.
 
