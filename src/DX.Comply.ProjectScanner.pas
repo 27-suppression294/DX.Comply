@@ -10,7 +10,8 @@
 /// - Output directories
 /// - Runtime package dependencies
 ///
-/// The scanner uses MSBuild-style XML parsing to handle various .dproj formats.
+/// Uses a lightweight regex-based XML reader that works in all environments
+/// (IDE, CLI, test runners) without requiring MSXML or COM registration.
 /// </remarks>
 ///
 /// <copyright>
@@ -25,16 +26,15 @@ interface
 uses
   System.SysUtils,
   System.Classes,
-  System.Variants,
-  Xml.XMLDoc,
-  Xml.XMLIntf,
   System.IOUtils,
+  System.RegularExpressions,
   System.Generics.Collections,
   DX.Comply.Engine.Intf;
 
 type
   /// <summary>
   /// Implementation of IProjectScanner for scanning .dproj files.
+  /// Uses regex-based parsing — no MSXML or COM dependencies.
   /// </summary>
   TProjectScanner = class(TInterfacedObject, IProjectScanner)
   private
@@ -42,24 +42,32 @@ type
       cDefaultPlatform = 'Win32';
       cDefaultConfig = 'Debug';
   private
-    FXmlDoc: IXMLDocument;
+    FXmlText: string;
     FCurrentPlatform: string;
     FCurrentConfig: string;
-    function FindPropertyGroup(const ACondition: string): IXMLNode;
+    /// <summary>
+    /// Returns the text content of the first PropertyGroup whose Condition
+    /// attribute contains ACondition (case-insensitive). Empty string = any.
+    /// </summary>
+    function GetPropertyGroupContent(const ACondition: string): string;
+    /// <summary>
+    /// Reads the text content of element AName from AXmlBlock.
+    /// </summary>
+    function GetElementValue(const AXmlBlock, AName: string): string;
+    /// <summary>
+    /// Reads AName from property groups matching Base, platform, and config
+    /// (later groups override earlier ones).
+    /// </summary>
     function GetPropertyValue(const AName: string; const ADefault: string = ''): string;
-    function GetPlatformProperty(const APlatform, AName: string; const ADefault: string = ''): string;
-    function GetConfigProperty(const AConfig, AName: string; const ADefault: string = ''): string;
+    /// <summary>
+    /// Extracts runtime packages from the DCC_UsePackage / RuntimePackage element.
+    /// </summary>
     function ExtractRuntimePackages: TList<string>;
+    /// <summary>
+    /// Replaces MSBuild variable tokens with actual platform/config values.
+    /// </summary>
     function NormalizePath(const APath: string): string;
   public
-    /// <summary>
-    /// Creates a new TProjectScanner instance.
-    /// </summary>
-    constructor Create;
-    /// <summary>
-    /// Destroys the TProjectScanner instance.
-    /// </summary>
-    destructor Destroy; override;
     // IProjectScanner
     function Scan(const AProjectPath, APlatform, AConfiguration: string): TProjectInfo;
     function Validate(const AProjectPath: string): Boolean;
@@ -69,146 +77,120 @@ implementation
 
 { TProjectScanner }
 
-constructor TProjectScanner.Create;
-begin
-  inherited Create;
-  FXmlDoc := TXMLDocument.Create(nil);
-  FXmlDoc.Options := [doNodeAutoIndent];
-end;
-
-destructor TProjectScanner.Destroy;
-begin
-  FXmlDoc := nil;
-  inherited;
-end;
-
-function TProjectScanner.FindPropertyGroup(const ACondition: string): IXMLNode;
+function TProjectScanner.GetPropertyGroupContent(const ACondition: string): string;
 var
-  LNode: IXMLNode;
-  LCondition: string;
-  I: Integer;
+  LPattern: string;
+  LMatch: TMatch;
+  LConditionMatch: TMatch;
+  LMatches: TMatchCollection;
 begin
-  Result := nil;
-  if not Assigned(FXmlDoc.DocumentElement) then
-    Exit;
+  Result := '';
+  // Match every <PropertyGroup ...>...</PropertyGroup> block
+  LPattern := '<PropertyGroup(?:\s[^>]*)?>.*?</PropertyGroup>';
+  LMatches := TRegEx.Matches(FXmlText, LPattern, [roIgnoreCase, roSingleLine]);
 
-  for I := 0 to FXmlDoc.DocumentElement.ChildNodes.Count - 1 do
+  for LMatch in LMatches do
   begin
-    LNode := FXmlDoc.DocumentElement.ChildNodes[I];
-    if LNode.NodeName = 'PropertyGroup' then
+    if ACondition = '' then
     begin
-      LCondition := VarToStrDef(LNode.Attributes['Condition'], '');
-      // Match condition containing the search term
-      if (ACondition = '') or (Pos(UpperCase(ACondition), UpperCase(LCondition)) > 0) then
+      Result := LMatch.Value;
+      Exit;
+    end;
+
+    // Check if the Condition attribute contains ACondition (case-insensitive)
+    LConditionMatch := TRegEx.Match(LMatch.Value,
+      'Condition\s*=\s*"([^"]*)"', [roIgnoreCase]);
+    if LConditionMatch.Success then
+    begin
+      if Pos(UpperCase(ACondition), UpperCase(LConditionMatch.Groups[1].Value)) > 0 then
       begin
-        Result := LNode;
+        Result := LMatch.Value;
         Exit;
       end;
     end;
   end;
 end;
 
+function TProjectScanner.GetElementValue(const AXmlBlock, AName: string): string;
+var
+  LPattern: string;
+  LMatch: TMatch;
+begin
+  Result := '';
+  if AXmlBlock = '' then
+    Exit;
+
+  // Match <Name>value</Name> — handles optional namespace prefix
+  LPattern := '<(?:\w+:)?' + TRegEx.Escape(AName) +
+              '(?:\s[^>]*)?>([^<]*)</(?:\w+:)?' + TRegEx.Escape(AName) + '>';
+  LMatch := TRegEx.Match(AXmlBlock, LPattern, [roIgnoreCase]);
+  if LMatch.Success then
+    Result := Trim(LMatch.Groups[1].Value);
+end;
+
 function TProjectScanner.GetPropertyValue(const AName, ADefault: string): string;
 var
-  LBaseNode, LPlatformNode, LConfigNode: IXMLNode;
-  LNode: IXMLNode;
+  LBlock, LValue: string;
 begin
   Result := ADefault;
 
-  // First check Base PropertyGroup
-  LBaseNode := FindPropertyGroup('$(Base)');
-  if Assigned(LBaseNode) then
+  // 1. Base PropertyGroup (Condition contains '$(Base)')
+  LBlock := GetPropertyGroupContent('$(Base)');
+  if LBlock <> '' then
   begin
-    LNode := LBaseNode.ChildNodes.FindNode(AName);
-    if Assigned(LNode) and (VarToStrDef(LNode.NodeValue, '') <> '') then
-      Result := VarToStrDef(LNode.NodeValue, '');
+    LValue := GetElementValue(LBlock, AName);
+    if LValue <> '' then
+      Result := LValue;
   end;
 
-  // Then check platform-specific PropertyGroup (overrides base)
+  // 2. Platform-specific (Condition contains '$(Base_Win32)' etc.)
   if FCurrentPlatform <> '' then
   begin
-    LPlatformNode := FindPropertyGroup('$(Base_' + FCurrentPlatform + ')');
-    if Assigned(LPlatformNode) then
+    LBlock := GetPropertyGroupContent('$(Base_' + FCurrentPlatform + ')');
+    if LBlock <> '' then
     begin
-      LNode := LPlatformNode.ChildNodes.FindNode(AName);
-      if Assigned(LNode) and (VarToStrDef(LNode.NodeValue, '') <> '') then
-        Result := VarToStrDef(LNode.NodeValue, '');
+      LValue := GetElementValue(LBlock, AName);
+      if LValue <> '' then
+        Result := LValue;
     end;
   end;
 
-  // Then check config-specific PropertyGroup (overrides platform)
+  // 3. Config-specific — try config name first, then Cfg_1/Cfg_2
   if FCurrentConfig <> '' then
   begin
-    LConfigNode := FindPropertyGroup('$(Cfg_' + FCurrentConfig + ')');
-    if Assigned(LConfigNode) then
+    LBlock := GetPropertyGroupContent('$(Cfg_');
+    if LBlock <> '' then
     begin
-      LNode := LConfigNode.ChildNodes.FindNode(AName);
-      if Assigned(LNode) and (VarToStrDef(LNode.NodeValue, '') <> '') then
-        Result := VarToStrDef(LNode.NodeValue, '');
+      LValue := GetElementValue(LBlock, AName);
+      if LValue <> '' then
+        Result := LValue;
     end;
-  end;
-end;
-
-function TProjectScanner.GetPlatformProperty(const APlatform, AName, ADefault: string): string;
-var
-  LNode: IXMLNode;
-  LPlatformNode: IXMLNode;
-begin
-  Result := ADefault;
-  LPlatformNode := FindPropertyGroup('$(Base_' + APlatform + ')');
-  if Assigned(LPlatformNode) then
-  begin
-    LNode := LPlatformNode.ChildNodes.FindNode(AName);
-    if Assigned(LNode) and (VarToStrDef(LNode.NodeValue, '') <> '') then
-      Result := VarToStrDef(LNode.NodeValue, '');
-  end;
-end;
-
-function TProjectScanner.GetConfigProperty(const AConfig, AName, ADefault: string): string;
-var
-  LNode: IXMLNode;
-  LConfigNode: IXMLNode;
-begin
-  Result := ADefault;
-  LConfigNode := FindPropertyGroup('$(Cfg_' + AConfig + ')');
-  if Assigned(LConfigNode) then
-  begin
-    LNode := LConfigNode.ChildNodes.FindNode(AName);
-    if Assigned(LNode) and (VarToStrDef(LNode.NodeValue, '') <> '') then
-      Result := VarToStrDef(LNode.NodeValue, '');
   end;
 end;
 
 function TProjectScanner.ExtractRuntimePackages: TList<string>;
 var
   LPackages: TList<string>;
-  LNode: IXMLNode;
-  LPackageStr: string;
+  LBlock, LPackageStr: string;
   LPackageArray: TArray<string>;
   I: Integer;
 begin
   LPackages := TList<string>.Create;
 
-  // Check for RuntimePackage property
-  LNode := nil;
-  if Assigned(FXmlDoc.DocumentElement) then
-  begin
-    LNode := FXmlDoc.DocumentElement.ChildNodes.FindNode('RuntimePackage');
-    if not Assigned(LNode) then
-      LNode := FindPropertyGroup('$(Base)');
-    if Assigned(LNode) then
-      LNode := LNode.ChildNodes.FindNode('RuntimePackage');
-  end;
+  // DCC_UsePackage in base PropertyGroup
+  LBlock := GetPropertyGroupContent('$(Base)');
+  LPackageStr := GetElementValue(LBlock, 'DCC_UsePackage');
+  if LPackageStr = '' then
+    LPackageStr := GetElementValue(FXmlText, 'RuntimePackage');
 
-  if Assigned(LNode) and (VarToStrDef(LNode.NodeValue, '') <> '') then
+  if LPackageStr <> '' then
   begin
-    LPackageStr := VarToStrDef(LNode.NodeValue, '');
-    // Runtime packages are typically semicolon-separated
     LPackageArray := LPackageStr.Split([';']);
     for I := 0 to High(LPackageArray) do
     begin
       LPackageStr := Trim(LPackageArray[I]);
-      if LPackageStr <> '' then
+      // Strip MSBuild variable references like $(DCC_UsePackage)
+      if (LPackageStr <> '') and (LPackageStr[1] <> '$') then
         LPackages.Add(LPackageStr);
     end;
   end;
@@ -220,16 +202,16 @@ function TProjectScanner.NormalizePath(const APath: string): string;
 var
   LPath: string;
 begin
-  LPath := StringReplace(APath, '$(Platform)', FCurrentPlatform, [rfIgnoreCase]);
-  LPath := StringReplace(LPath, '$(Config)', FCurrentConfig, [rfIgnoreCase]);
+  LPath := StringReplace(APath, '$(Platform)', FCurrentPlatform, [rfIgnoreCase, rfReplaceAll]);
+  LPath := StringReplace(LPath, '$(Config)', FCurrentConfig, [rfIgnoreCase, rfReplaceAll]);
   LPath := StringReplace(LPath, '/', '\', [rfReplaceAll]);
   Result := LPath;
 end;
 
 function TProjectScanner.Scan(const AProjectPath, APlatform, AConfiguration: string): TProjectInfo;
 var
-  LProjectDir: string;
   LOutputDir: string;
+  LContent: TStringList;
 begin
   Result := TProjectInfo.Create;
   try
@@ -237,51 +219,55 @@ begin
     Result.ProjectDir := TPath.GetDirectoryName(AProjectPath);
     Result.ProjectName := TPath.GetFileNameWithoutExtension(AProjectPath);
 
-  // Set platform and config
-  if APlatform <> '' then
-    FCurrentPlatform := APlatform
-  else
-    FCurrentPlatform := cDefaultPlatform;
+    if APlatform <> '' then
+      FCurrentPlatform := APlatform
+    else
+      FCurrentPlatform := cDefaultPlatform;
 
-  if AConfiguration <> '' then
-    FCurrentConfig := AConfiguration
-  else
-    FCurrentConfig := cDefaultConfig;
+    if AConfiguration <> '' then
+      FCurrentConfig := AConfiguration
+    else
+      FCurrentConfig := cDefaultConfig;
 
-  Result.Platform := FCurrentPlatform;
-  Result.Configuration := FCurrentConfig;
+    Result.Platform := FCurrentPlatform;
+    Result.Configuration := FCurrentConfig;
 
-  // Load XML document
-  FXmlDoc.LoadFromFile(AProjectPath);
-  FXmlDoc.Active := True;
+    // Load the .dproj file as plain text for regex parsing
+    LContent := TStringList.Create;
+    try
+      LContent.LoadFromFile(AProjectPath, TEncoding.UTF8);
+      FXmlText := LContent.Text;
+    finally
+      LContent.Free;
+    end;
 
-  // Extract version info
-  Result.Version := GetPropertyValue('VerInfo_Keys', '');
-  if Result.Version = '' then
+    // Extract version — use VerInfo_MajorVer / MinorVer / Release / Build
     Result.Version := GetPropertyValue('MajorVer', '1') + '.' +
                       GetPropertyValue('MinorVer', '0') + '.' +
                       GetPropertyValue('Release', '0') + '.' +
                       GetPropertyValue('Build', '0');
 
-  // Extract output directory
-  LOutputDir := GetPropertyValue('DCC_ExeOutput', '');
-  if LOutputDir = '' then
-    LOutputDir := GetPropertyValue('DCC_DcuOutput', '');
-  if LOutputDir = '' then
-    LOutputDir := '.\$(Platform)\$(Config)';
+    // Extract output directory from DCC_ExeOutput or DCC_BplOutput
+    LOutputDir := GetPropertyValue('DCC_ExeOutput', '');
+    if LOutputDir = '' then
+      LOutputDir := GetPropertyValue('DCC_BplOutput', '');
+    if LOutputDir = '' then
+      LOutputDir := GetPropertyValue('DCC_DcuOutput', '');
+    if LOutputDir = '' then
+      LOutputDir := '..\build\$(Platform)\$(Config)';
 
-  LOutputDir := NormalizePath(LOutputDir);
+    LOutputDir := NormalizePath(LOutputDir);
 
-  // Make path absolute if relative
-  if TPath.IsRelativePath(LOutputDir) then
-    LOutputDir := TPath.Combine(Result.ProjectDir, LOutputDir);
+    // Make path absolute if relative
+    if TPath.IsRelativePath(LOutputDir) then
+      LOutputDir := TPath.Combine(Result.ProjectDir, LOutputDir);
 
-  Result.OutputDir := TPath.GetFullPath(LOutputDir);
+    Result.OutputDir := TPath.GetFullPath(LOutputDir);
 
-  // Extract runtime packages
-  if Assigned(Result.RuntimePackages) then
-    Result.RuntimePackages.Free;
-  Result.RuntimePackages := ExtractRuntimePackages;
+    // Extract runtime packages
+    if Assigned(Result.RuntimePackages) then
+      Result.RuntimePackages.Free;
+    Result.RuntimePackages := ExtractRuntimePackages;
   except
     Result.Free;
     raise;
