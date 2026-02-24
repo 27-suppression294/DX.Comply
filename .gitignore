@@ -1,0 +1,103 @@
+# Delphi gitignore - optimized for DX.Comply
+# Source: https://github.com/omonien/DelphiStandards/blob/master/Delphi%20GitIgnore.txt
+
+# =========================
+# Compiled files
+# =========================
+*.dcu
+*.dcp
+*.bpl
+*.exe
+*.dll
+*.res
+*.rsm
+*.map
+*.tvsconfig
+*.drc
+*.lib
+*.a
+*.o
+*.obj
+
+# =========================
+# IDE files
+# =========================
+*.dsk
+*.local
+*.identcache
+*.projdata
+*.tvsconfig
+*.stat
+*.groupproj.local
+*.dproj.local
+
+# History and backup files
+__history/
+__recovery/
+*.bak
+*.orig
+*~
+
+# =========================
+# Build output
+# =========================
+build/
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+Win32/
+Win64/
+
+# =========================
+# Packages
+# =========================
+*.bpl
+*.dcp
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+*.code-workspace
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# =========================
+# Windows
+# =========================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# Test results
+# =========================
+*.xml
+TestResults/
+
+# =========================
+# NuGet (if used)
+# =========================
+packages/
+.nuget/
+
+# =========================
+# Artifacts
+# =========================
+*.zip
+*.7z
+*.rar
+
+# =========================
+# SBOM output (keep example)
+# =========================
+# bom.json
+# bom.xml

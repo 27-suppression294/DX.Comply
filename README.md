@@ -8,7 +8,7 @@
 
 ## TL;DR
 
-EU law (CRA, from 2027) requires software vendors to document what is inside their products.
+The EU Cyber Resilience Act (CRA) — in force since December 2024 — requires software vendors to document what is inside their products. Full compliance is mandatory by December 2027.
 DX.Comply generates that document — a *Software Bill of Materials* — directly from your RAD Studio project in one click, in a format that satisfies the legal requirement.
 
 **You generate it. You archive it. You never have to submit it anywhere.**

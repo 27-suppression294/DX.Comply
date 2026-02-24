@@ -1,0 +1,77 @@
+# Delphi gitattributes - optimized for DX.Comply
+# Source: https://github.com/omonien/DelphiStandards/blob/master/Delphi%20GitAttributes.txt
+
+# =========================
+# Text files with CRLF (Windows)
+# =========================
+# Delphi source files
+*.pas text eol=crlf
+*.dfm text eol=crlf
+*.fmx text eol=crlf
+*.dpr text eol=crlf
+*.dpk text eol=crlf
+*.inc text eol=crlf
+
+# Project files
+*.dproj text eol=crlf
+*.groupproj text eol=crlf
+*.bdsgroup text eol=crlf
+*.bdsproj text eol=crlf
+
+# Configuration files
+*.json text eol=crlf
+*.xml text eol=crlf
+*.yaml text eol=crlf
+*.yml text eol=crlf
+*.ini text eol=crlf
+*.cfg text eol=crlf
+*.conf text eol=crlf
+
+# Documentation
+*.md text eol=crlf
+*.txt text eol=crlf
+*.rst text eol=crlf
+
+# Web files
+*.html text eol=crlf
+*.css text eol=crlf
+*.js text eol=crlf
+
+# Scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# =========================
+# Binary files
+# =========================
+*.res binary
+*.dcr binary
+*.ico binary
+*.bmp binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.exe binary
+*.dll binary
+*.bpl binary
+*.dcp binary
+*.dcu binary
+*.lib binary
+*.obj binary
+*.o binary
+*.a binary
+
+# =========================
+# Encoding hints
+# =========================
+# Delphi source files should be UTF-8 with BOM
+*.pas working-tree-encoding=UTF-8
+*.pas encoding=UTF-8
+*.dpr working-tree-encoding=UTF-8
+*.dpr encoding=UTF-8
+*.dpk working-tree-encoding=UTF-8
+*.dpk encoding=UTF-8
+*.dproj working-tree-encoding=UTF-8
+*.dproj encoding=UTF-8

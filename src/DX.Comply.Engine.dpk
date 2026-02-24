@@ -1,0 +1,65 @@
+package DX.Comply.Engine;
+
+/// <summary>
+/// DX.Comply.Engine Package
+/// Core SBOM generation engine for Delphi projects.
+/// </summary>
+///
+/// <remarks>
+/// This package contains the core components for SBOM generation:
+/// - ProjectScanner: Parses .dproj files
+/// - FileScanner: Scans build output directories
+/// - HashService: Computes cryptographic hashes
+/// - CycloneDx.Writer: Generates CycloneDX JSON SBOMs
+///
+/// This package has no UI dependencies and can be used in both VCL and FMX projects.
+/// </remarks>
+///
+/// <copyright>
+/// Copyright © 2026 Olaf Monien
+/// Licensed under MIT
+/// </copyright>
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DEFINE RELEASE}
+{$DESCRIPTION 'DX.Comply SBOM Generation Engine'}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  xmlrtl;
+
+contains
+  DX.Comply.Engine.Intf in 'DX.Comply.Engine.Intf.pas',
+  DX.Comply.ProjectScanner in 'DX.Comply.ProjectScanner.pas',
+  DX.Comply.FileScanner in 'DX.Comply.FileScanner.pas',
+  DX.Comply.HashService in 'DX.Comply.HashService.pas',
+  DX.Comply.CycloneDx.Writer in 'DX.Comply.CycloneDx.Writer.pas',
+  DX.Comply.Engine in 'DX.Comply.Engine.pas';
+
+end.
