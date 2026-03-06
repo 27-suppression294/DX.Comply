@@ -29,6 +29,9 @@ uses
   DX.Comply.Tests.FileScanner in 'DX.Comply.Tests.FileScanner.pas',
   DX.Comply.Tests.ProjectScanner in 'DX.Comply.Tests.ProjectScanner.pas',
   DX.Comply.Tests.CycloneDx.Writer in 'DX.Comply.Tests.CycloneDx.Writer.pas',
+  DX.Comply.Tests.CycloneDx.XmlWriter in 'DX.Comply.Tests.CycloneDx.XmlWriter.pas',
+  DX.Comply.Tests.Spdx.Writer in 'DX.Comply.Tests.Spdx.Writer.pas',
+  DX.Comply.Tests.Schema.Validator in 'DX.Comply.Tests.Schema.Validator.pas',
   DX.Comply.Tests.Engine in 'DX.Comply.Tests.Engine.pas';
 
 var
@@ -40,6 +43,10 @@ var
 begin
   try
     TDUnitX.RegisterTestFixture(THashServiceTests);
+    TDUnitX.RegisterTestFixture(TCycloneDxWriterTests);
+    TDUnitX.RegisterTestFixture(TCycloneDxXmlWriterTests);
+    TDUnitX.RegisterTestFixture(TSpdxWriterTests);
+    TDUnitX.RegisterTestFixture(TSchemaValidatorTests);
     // Other fixtures register themselves via the initialization section
     // and the [TestFixture] attribute — picked up through LRunner.UseRTTI.
 

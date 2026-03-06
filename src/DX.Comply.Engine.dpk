@@ -60,6 +60,9 @@ contains
   DX.Comply.FileScanner in 'DX.Comply.FileScanner.pas',
   DX.Comply.HashService in 'DX.Comply.HashService.pas',
   DX.Comply.CycloneDx.Writer in 'DX.Comply.CycloneDx.Writer.pas',
+  DX.Comply.CycloneDx.XmlWriter in 'DX.Comply.CycloneDx.XmlWriter.pas',
+  DX.Comply.Spdx.Writer in 'DX.Comply.Spdx.Writer.pas',
+  DX.Comply.Schema.Validator in 'DX.Comply.Schema.Validator.pas',
   DX.Comply.Engine in 'DX.Comply.Engine.pas';
 
 end.

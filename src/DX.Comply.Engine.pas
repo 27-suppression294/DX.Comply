@@ -39,7 +39,10 @@ uses
   DX.Comply.ProjectScanner,
   DX.Comply.FileScanner,
   DX.Comply.HashService,
-  DX.Comply.CycloneDx.Writer;
+  DX.Comply.CycloneDx.Writer,
+  DX.Comply.CycloneDx.XmlWriter,
+  DX.Comply.Spdx.Writer,
+  DX.Comply.Schema.Validator;
 
 type
   /// <summary>
@@ -123,6 +126,10 @@ type
     /// </summary>
     function ValidateProject(const AProjectPath: string): Boolean;
     /// <summary>
+    /// Validates a generated SBOM file against the schema.
+    /// </summary>
+    function ValidateSbom(const AFilePath: string): TValidationResult;
+    /// <summary>
     /// Progress notification event.
     /// </summary>
     property OnProgress: TProgressEvent read FOnProgress write FOnProgress;
@@ -187,9 +194,9 @@ begin
     sfCycloneDxJson:
       Result := TCycloneDxJsonWriter.Create;
     sfCycloneDxXml:
-      raise ENotImplemented.Create('CycloneDX XML format not yet implemented');
+      Result := TCycloneDxXmlWriter.Create;
     sfSpdxJson:
-      raise ENotImplemented.Create('SPDX JSON format not yet implemented (Pro feature)');
+      Result := TSpdxJsonWriter.Create;
   else
     Result := TCycloneDxJsonWriter.Create;
   end;
@@ -355,7 +362,23 @@ begin
       Result := FSbomWriter.Write(LOutputPath, LMetadata, LArtefacts, LProjectInfo);
 
       if Result then
-        DoProgress(Format('SBOM generated: %s', [LOutputPath]), 100)
+      begin
+        DoProgress('Validating SBOM...', 90);
+        // Post-write schema validation
+        var LValidation := ValidateSbom(LOutputPath);
+        if LValidation.IsValid then
+          DoProgress(Format('SBOM generated and validated: %s', [LOutputPath]), 100)
+        else
+        begin
+          DoProgress(Format('SBOM generated: %s (with validation warnings)', [LOutputPath]), 95);
+          var LErr: string;
+          for LErr in LValidation.Errors do
+            DoProgress('Validation error: ' + LErr, -1);
+          var LWarn: string;
+          for LWarn in LValidation.Warnings do
+            DoProgress('Validation warning: ' + LWarn, 95);
+        end;
+      end
       else
         DoProgress('Error: Failed to write SBOM', -1);
 
@@ -376,6 +399,34 @@ end;
 function TDxComplyGenerator.ValidateProject(const AProjectPath: string): Boolean;
 begin
   Result := FProjectScanner.Validate(AProjectPath);
+end;
+
+function TDxComplyGenerator.ValidateSbom(const AFilePath: string): TValidationResult;
+var
+  LContent: TStringList;
+  LValidator: TSbomValidator;
+begin
+  Result := TValidationResult.CreateValid;
+  if not TFile.Exists(AFilePath) then
+  begin
+    SetLength(Result.Errors, 1);
+    Result.Errors[0] := 'File not found: ' + AFilePath;
+    Result.IsValid := False;
+    Exit;
+  end;
+
+  LContent := TStringList.Create;
+  try
+    LContent.LoadFromFile(AFilePath, TEncoding.UTF8);
+    LValidator := TSbomValidator.Create;
+    try
+      Result := LValidator.ValidateAuto(LContent.Text);
+    finally
+      LValidator.Free;
+    end;
+  finally
+    LContent.Free;
+  end;
 end;
 
 end.

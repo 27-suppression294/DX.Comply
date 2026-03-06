@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{E4F5A6B7-C8D9-4E0F-1A2B-3C4D5E6F7A8B}</ProjectGuid>
@@ -130,7 +130,7 @@
                 <VersionInfoKey Name="FileVersion">1.0.0.0</VersionInfoKey>
                 <VersionInfoKey Name="InternalName">ExampleApp</VersionInfoKey>
                 <VersionInfoKey Name="LegalCopyright">Copyright &#169; 2026 Olaf Monien</VersionInfoKey>
-                <VersionInfoKey Name="LegalTrademarks"></VersionInfoKey>
+                <VersionInfoKey Name="LegalTrademarks"/>
                 <VersionInfoKey Name="OriginalFilename">ExampleApp.exe</VersionInfoKey>
                 <VersionInfoKey Name="ProductName">DX.Comply</VersionInfoKey>
                 <VersionInfoKey Name="ProductVersion">1.0.0.0</VersionInfoKey>
