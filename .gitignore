@@ -108,3 +108,6 @@ GTAGS
 # =========================
 # bom.json
 # bom.xml
+"*.diag.log"  
+"*.f*.dproj"  
+"msbuild-preprocess.log" 

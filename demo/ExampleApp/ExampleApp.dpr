@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// ExampleApp
 /// Minimal console application demonstrating DX.Comply programmatic SBOM generation.
 /// </summary>

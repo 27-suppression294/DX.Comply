@@ -1,24 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
-        <ProjectVersion>19.5</ProjectVersion>
     </PropertyGroup>
     <ItemGroup>
         <Projects Include="src\DX.Comply.Engine.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="src\DX.Comply.IDE.dproj">
-            <Dependencies>src\DX.Comply.Engine.dproj</Dependencies>
-        </Projects>
-        <Projects Include="demo\CLI\dxcomply.dproj">
-            <Dependencies>src\DX.Comply.Engine.dproj</Dependencies>
-        </Projects>
-        <Projects Include="demo\ExampleApp\ExampleApp.dproj">
-            <Dependencies>src\DX.Comply.Engine.dproj</Dependencies>
+            <Dependencies/>
         </Projects>
         <Projects Include="tests\DX.Comply.Tests.dproj">
-            <Dependencies>src\DX.Comply.Engine.dproj</Dependencies>
+            <Dependencies/>
+        </Projects>
+        <Projects Include="demo\ExampleApp\ExampleApp.dproj">
+            <Dependencies/>
         </Projects>
     </ItemGroup>
     <ProjectExtensions>
@@ -28,59 +23,50 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
-    <Target Name="DXComplyEngine">
+    <Target Name="DX_Comply_Engine">
         <MSBuild Projects="src\DX.Comply.Engine.dproj"/>
     </Target>
-    <Target Name="DXComplyEngine:Clean">
-        <MSBuild Targets="Clean" Projects="src\DX.Comply.Engine.dproj"/>
+    <Target Name="DX_Comply_Engine:Clean">
+        <MSBuild Projects="src\DX.Comply.Engine.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="DXComplyEngine:Make">
-        <MSBuild Targets="Make" Projects="src\DX.Comply.Engine.dproj"/>
+    <Target Name="DX_Comply_Engine:Make">
+        <MSBuild Projects="src\DX.Comply.Engine.dproj" Targets="Make"/>
     </Target>
-    <Target Name="DXComplyIDE">
+    <Target Name="DX_Comply_IDE">
         <MSBuild Projects="src\DX.Comply.IDE.dproj"/>
     </Target>
-    <Target Name="DXComplyIDE:Clean">
-        <MSBuild Targets="Clean" Projects="src\DX.Comply.IDE.dproj"/>
+    <Target Name="DX_Comply_IDE:Clean">
+        <MSBuild Projects="src\DX.Comply.IDE.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="DXComplyIDE:Make">
-        <MSBuild Targets="Make" Projects="src\DX.Comply.IDE.dproj"/>
+    <Target Name="DX_Comply_IDE:Make">
+        <MSBuild Projects="src\DX.Comply.IDE.dproj" Targets="Make"/>
     </Target>
-    <Target Name="DXComplyCLI">
-        <MSBuild Projects="demo\CLI\dxcomply.dproj"/>
+    <Target Name="DX_Comply_Tests">
+        <MSBuild Projects="tests\DX.Comply.Tests.dproj"/>
     </Target>
-    <Target Name="DXComplyCLI:Clean">
-        <MSBuild Targets="Clean" Projects="demo\CLI\dxcomply.dproj"/>
+    <Target Name="DX_Comply_Tests:Clean">
+        <MSBuild Projects="tests\DX.Comply.Tests.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="DXComplyCLI:Make">
-        <MSBuild Targets="Make" Projects="demo\CLI\dxcomply.dproj"/>
+    <Target Name="DX_Comply_Tests:Make">
+        <MSBuild Projects="tests\DX.Comply.Tests.dproj" Targets="Make"/>
     </Target>
     <Target Name="ExampleApp">
         <MSBuild Projects="demo\ExampleApp\ExampleApp.dproj"/>
     </Target>
     <Target Name="ExampleApp:Clean">
-        <MSBuild Targets="Clean" Projects="demo\ExampleApp\ExampleApp.dproj"/>
+        <MSBuild Projects="demo\ExampleApp\ExampleApp.dproj" Targets="Clean"/>
     </Target>
     <Target Name="ExampleApp:Make">
-        <MSBuild Targets="Make" Projects="demo\ExampleApp\ExampleApp.dproj"/>
-    </Target>
-    <Target Name="DXComplyTests">
-        <MSBuild Projects="tests\DX.Comply.Tests.dproj"/>
-    </Target>
-    <Target Name="DXComplyTests:Clean">
-        <MSBuild Targets="Clean" Projects="tests\DX.Comply.Tests.dproj"/>
-    </Target>
-    <Target Name="DXComplyTests:Make">
-        <MSBuild Targets="Make" Projects="tests\DX.Comply.Tests.dproj"/>
+        <MSBuild Projects="demo\ExampleApp\ExampleApp.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="DXComplyEngine;DXComplyIDE;DXComplyCLI;ExampleApp;DXComplyTests"/>
+        <CallTarget Targets="DX_Comply_Engine;DX_Comply_IDE;DX_Comply_Tests;ExampleApp"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="DXComplyEngine:Clean;DXComplyIDE:Clean;DXComplyCLI:Clean;ExampleApp:Clean;DXComplyTests:Clean"/>
+        <CallTarget Targets="DX_Comply_Engine:Clean;DX_Comply_IDE:Clean;DX_Comply_Tests:Clean;ExampleApp:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="DXComplyEngine:Make;DXComplyIDE:Make;DXComplyCLI:Make;ExampleApp:Make;DXComplyTests:Make"/>
+        <CallTarget Targets="DX_Comply_Engine:Make;DX_Comply_IDE:Make;DX_Comply_Tests:Make;ExampleApp:Make"/>
     </Target>
-    <Import Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')" Project="$(BDS)\Bin\CodeGear.Group.Targets"/>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

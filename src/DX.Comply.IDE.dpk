@@ -1,23 +1,4 @@
-package DX.Comply.IDE;
-
-/// <summary>
-/// DX.Comply.IDE Package
-/// Delphi IDE integration package for DX.Comply SBOM generation.
-/// </summary>
-///
-/// <remarks>
-/// This design-time-only package installs TDxComplyWizard into the IDE,
-/// adding SBOM generation to the Help menu (via IOTAMenuWizard) and to
-/// the Project menu (via a directly injected TMenuItem).
-///
-/// All engine source units are compiled directly into this package to avoid
-/// a runtime package dependency on DX.Comply.Engine in the design-time context.
-/// </remarks>
-///
-/// <copyright>
-/// Copyright © 2026 Olaf Monien
-/// Licensed under MIT
-/// </copyright>
+﻿package DX.Comply.IDE;
 
 {$R *.res}
 {$ALIGN 8}
@@ -44,6 +25,7 @@ package DX.Comply.IDE;
 {$DESCRIPTION 'DX.Comply IDE Integration Package'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
+{$LIBSUFFIX '370'}
 
 requires
   rtl,

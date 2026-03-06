@@ -1,15 +1,15 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{8F8E4D5A-9B7C-4E3F-A1D2-C8E9F7B6A5C4}</ProjectGuid>
-        <ProjectVersion>19.5</ProjectVersion>
+        <Base>True</Base>
+        <AppType>Package</AppType>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <FrameworkType>None</FrameworkType>
         <MainSource>DX.Comply.Engine.dpk</MainSource>
-        <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <ProjectGuid>{8F8E4D5A-9B7C-4E3F-A1D2-C8E9F7B6A5C4}</ProjectGuid>
+        <ProjectName Condition="'$(ProjectName)'==''">DX.Comply.Engine</ProjectName>
+        <ProjectVersion>20.3</ProjectVersion>
         <TargetedPlatforms>3</TargetedPlatforms>
-        <AppType>Package</AppType>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -24,56 +24,9 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Base)'!=''">
-        <DCC_DcuOutput>..\build\$(Platform)\$(Config)\dcu</DCC_DcuOutput>
-        <DCC_ExeOutput>..\build\$(Platform)\$(Config)</DCC_ExeOutput>
-        <DCC_DcpOutput>..\build\$(Platform)\$(Config)\dcu</DCC_DcpOutput>
-        <DCC_BplOutput>..\build\$(Platform)\$(Config)</DCC_BplOutput>
-        <DCC_UnitSearchPath>..\src</DCC_UnitSearchPath>
-        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_Description>DX.Comply SBOM Generation Engine</DCC_Description>
-        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply SBOM Generation Engine;FileVersion=1.0.0.0;InternalName=DX.Comply.Engine;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.Engine.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
-        <VerInfo_MajorVer>1</VerInfo_MajorVer>
-        <VerInfo_MinorVer>0</VerInfo_MinorVer>
-        <VerInfo_Release>0</VerInfo_Release>
-        <VerInfo_Build>0</VerInfo_Build>
-        <VerInfo_Locale>1031</VerInfo_Locale>
-        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <DllSuffix>130</DllSuffix>
-        <GenPackage>true</GenPackage>
-        <GenDLL>true</GenDLL>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <DCC_UsePackage>rtl;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
-        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply SBOM Generation Engine;FileVersion=1.0.0.0;InternalName=DX.Comply.Engine;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.Engine.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
-        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-        <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
-        <AppEnableHighDPI>true</AppEnableHighDPI>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <DCC_UsePackage>rtl;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
-        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply SBOM Generation Engine;FileVersion=1.0.0.0;InternalName=DX.Comply.Engine;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.Engine.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
-        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-        <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
-        <AppEnableHighDPI>true</AppEnableHighDPI>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
         <Cfg_1>true</Cfg_1>
         <CfgParent>Base</CfgParent>
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win32)'!=''">
-        <Cfg_1_Win32>true</Cfg_1_Win32>
-        <CfgParent>Cfg_1</CfgParent>
-        <Cfg_1>true</Cfg_1>
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win64)'!=''">
-        <Cfg_1_Win64>true</Cfg_1_Win64>
-        <CfgParent>Cfg_1</CfgParent>
-        <Cfg_1>true</Cfg_1>
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_2)'!=''">
@@ -81,36 +34,62 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win32)'!=''">
-        <Cfg_2_Win32>true</Cfg_2_Win32>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
-        <Base>true</Base>
+    <PropertyGroup Condition="'$(Base)'!=''">
+        <SanitizedProjectName>DX_Comply_Engine</SanitizedProjectName>
+        <DCC_BplOutput>..\build\$(Platform)\$(Config)</DCC_BplOutput>
+        <DCC_DcpOutput>..\build\$(Platform)\$(Config)\dcu</DCC_DcpOutput>
+        <DCC_DcuOutput>..\build\$(Platform)\$(Config)\dcu</DCC_DcuOutput>
+        <DCC_Description>DX.Comply SBOM Generation Engine</DCC_Description>
+        <DCC_ExeOutput>..\build\$(Platform)\$(Config)</DCC_ExeOutput>
+        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
+        <DCC_UnitSearchPath>..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DllSuffix>370</DllSuffix>
+        <GenDLL>true</GenDLL>
+        <GenPackage>true</GenPackage>
+        <VerInfo_Build>0</VerInfo_Build>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply SBOM Generation Engine;FileVersion=1.0.0.0;InternalName=DX.Comply.Engine;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.Engine.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
+        <VerInfo_Locale>1031</VerInfo_Locale>
+        <VerInfo_MajorVer>1</VerInfo_MajorVer>
+        <VerInfo_MinorVer>0</VerInfo_MinorVer>
+        <VerInfo_Release>0</VerInfo_Release>
     </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win64)'!=''">
-        <Cfg_2_Win64>true</Cfg_2_Win64>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
-        <Base>true</Base>
+    <PropertyGroup Condition="'$(Base_Win32)'!=''">
+        <AppEnableHighDPI>true</AppEnableHighDPI>
+        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
+        <DCC_UsePackage>rtl;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
+        <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
+        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
+        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply SBOM Generation Engine;FileVersion=1.0.0.0;InternalName=DX.Comply.Engine;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.Engine.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Base_Win64)'!=''">
+        <AppEnableHighDPI>true</AppEnableHighDPI>
+        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
+        <DCC_UsePackage>rtl;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
+        <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
+        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
+        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply SBOM Generation Engine;FileVersion=1.0.0.0;InternalName=DX.Comply.Engine;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.Engine.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
-        <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
-        <DCC_Optimize>false</DCC_Optimize>
         <DCC_DebugInformation>1</DCC_DebugInformation>
+        <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
         <DCC_LocalDebugSymbols>true</DCC_LocalDebugSymbols>
+        <DCC_Optimize>false</DCC_Optimize>
         <DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
-        <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
         <DCC_DebugInformation>0</DCC_DebugInformation>
+        <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
-        <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
         <DCC_Optimize>true</DCC_Optimize>
+        <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
     </PropertyGroup>
     <ItemGroup>
-        <DelphiCompile Include="DX.Comply.Engine.dpk">
+        <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="xmlrtl.dcp"/>
         <DCCReference Include="DX.Comply.Engine.Intf.pas"/>
         <DCCReference Include="DX.Comply.ProjectScanner.pas"/>
         <DCCReference Include="DX.Comply.FileScanner.pas"/>
@@ -142,8 +121,16 @@
                 </Source>
             </Delphi.Personality>
             <Platforms>
+                <Platform value="Android">False</Platform>
+                <Platform value="Android64">False</Platform>
+                <Platform value="Linux64">False</Platform>
+                <Platform value="OSX64">False</Platform>
+                <Platform value="OSXARM64">False</Platform>
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>
+                <Platform value="Win64x">False</Platform>
+                <Platform value="iOSDevice64">False</Platform>
+                <Platform value="iOSSimARM64">False</Platform>
             </Platforms>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>

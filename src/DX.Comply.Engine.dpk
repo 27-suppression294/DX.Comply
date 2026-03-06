@@ -1,24 +1,4 @@
-package DX.Comply.Engine;
-
-/// <summary>
-/// DX.Comply.Engine Package
-/// Core SBOM generation engine for Delphi projects.
-/// </summary>
-///
-/// <remarks>
-/// This package contains the core components for SBOM generation:
-/// - ProjectScanner: Parses .dproj files
-/// - FileScanner: Scans build output directories
-/// - HashService: Computes cryptographic hashes
-/// - CycloneDx.Writer: Generates CycloneDX JSON SBOMs
-///
-/// This package has no UI dependencies and can be used in both VCL and FMX projects.
-/// </remarks>
-///
-/// <copyright>
-/// Copyright © 2026 Olaf Monien
-/// Licensed under MIT
-/// </copyright>
+﻿package DX.Comply.Engine;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -49,6 +29,7 @@ package DX.Comply.Engine;
 {$DESCRIPTION 'DX.Comply SBOM Generation Engine'}
 {$RUNONLY}
 {$IMPLICITBUILD ON}
+{$LIBSUFFIX '370'}
 
 requires
   rtl,
