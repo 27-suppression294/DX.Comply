@@ -88,6 +88,7 @@
         <DCCReference Include="DX.Comply.Tests.HashService.pas"/>
         <DCCReference Include="DX.Comply.Tests.FileScanner.pas"/>
         <DCCReference Include="DX.Comply.Tests.ProjectScanner.pas"/>
+        <DCCReference Include="DX.Comply.Tests.UnitResolver.pas"/>
         <DCCReference Include="DX.Comply.Tests.CycloneDx.Writer.pas"/>
         <DCCReference Include="DX.Comply.Tests.CycloneDx.XmlWriter.pas"/>
         <DCCReference Include="DX.Comply.Tests.Spdx.Writer.pas"/>

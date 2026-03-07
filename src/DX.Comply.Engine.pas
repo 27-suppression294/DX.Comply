@@ -38,6 +38,7 @@ uses
   DX.Comply.Engine.Intf,
   DX.Comply.BuildEvidence.Intf,
   DX.Comply.BuildEvidence.Reader,
+  DX.Comply.UnitResolver,
   DX.Comply.ProjectScanner,
   DX.Comply.FileScanner,
   DX.Comply.HashService,
@@ -88,6 +89,7 @@ type
   private
     FProjectScanner: IProjectScanner;
     FBuildEvidenceReader: IBuildEvidenceReader;
+    FUnitResolver: IUnitResolver;
     FFileScanner: IFileScanner;
     FHashService: IHashService;
     FSbomWriter: ISbomWriter;
@@ -98,6 +100,8 @@ type
     function CreateWriter(AFormat: TSbomFormat): ISbomWriter;
     function BuildMetadata(const AConfig: TSbomConfig): TSbomMetadata;
     function ReadBuildEvidence(const AProjectInfo: TProjectInfo): TBuildEvidence;
+    function ResolveCompositionEvidence(const AProjectInfo: TProjectInfo;
+      const ABuildEvidence: TBuildEvidence): TCompositionEvidence;
   public
     /// <summary>
     /// Creates a new TDxComplyGenerator instance.
@@ -168,6 +172,7 @@ begin
   FConfig := TSbomConfig.Default;
   FProjectScanner := TProjectScanner.Create;
   FBuildEvidenceReader := TBuildEvidenceReader.Create;
+  FUnitResolver := TUnitResolver.Create;
   FHashService := THashService.Create;
   FFileScanner := TFileScanner.Create(FHashService);
 end;
@@ -182,6 +187,7 @@ destructor TDxComplyGenerator.Destroy;
 begin
   FProjectScanner := nil;
   FBuildEvidenceReader := nil;
+  FUnitResolver := nil;
   FFileScanner := nil;
   FHashService := nil;
   FSbomWriter := nil;
@@ -194,6 +200,15 @@ begin
     Result := FBuildEvidenceReader.Read(AProjectInfo)
   else
     Result := TBuildEvidence.Create;
+end;
+
+function TDxComplyGenerator.ResolveCompositionEvidence(const AProjectInfo: TProjectInfo;
+  const ABuildEvidence: TBuildEvidence): TCompositionEvidence;
+begin
+  if Assigned(FUnitResolver) then
+    Result := FUnitResolver.Resolve(AProjectInfo, ABuildEvidence)
+  else
+    Result := TCompositionEvidence.Create;
 end;
 
 procedure TDxComplyGenerator.DoProgress(const AMessage: string; const AProgress: Integer);
@@ -305,6 +320,7 @@ function TDxComplyGenerator.Generate(const AProjectPath, AOutputPath: string;
 var
   LProjectInfo: TProjectInfo;
   LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
   LArtefacts: TArtefactList;
   LMetadata: TSbomMetadata;
   LOutputPath: string;
@@ -324,6 +340,7 @@ begin
   // Scan project — initialize record so the outer finally can safely call Free
   LProjectInfo := Default(TProjectInfo);
   LBuildEvidence := Default(TBuildEvidence);
+  LCompositionEvidence := Default(TCompositionEvidence);
   try
     LProjectInfo := FProjectScanner.Scan(AProjectPath, FConfig.Platform, FConfig.Configuration);
   except
@@ -339,6 +356,11 @@ begin
     LBuildEvidence := ReadBuildEvidence(LProjectInfo);
     DoProgress(Format('Collected %d build evidence item(s)',
       [LBuildEvidence.EvidenceItems.Count]), 25);
+
+    DoProgress('Resolving composition evidence...', 28);
+    LCompositionEvidence := ResolveCompositionEvidence(LProjectInfo, LBuildEvidence);
+    DoProgress(Format('Resolved %d composition unit(s)',
+      [LCompositionEvidence.Units.Count]), 29);
 
     DoProgress('Scanning build output...', 30);
 
@@ -407,6 +429,7 @@ begin
       LArtefacts.Free;
     end;
   finally
+    LCompositionEvidence.Free;
     LBuildEvidence.Free;
     LProjectInfo.Free;
   end;
