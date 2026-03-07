@@ -29,6 +29,7 @@ uses
   DX.Comply.Tests.BuildEvidence.Reader in 'DX.Comply.Tests.BuildEvidence.Reader.pas',
   DX.Comply.Tests.HashService in 'DX.Comply.Tests.HashService.pas',
   DX.Comply.Tests.FileScanner in 'DX.Comply.Tests.FileScanner.pas',
+  DX.Comply.Tests.MapFile.Reader in 'DX.Comply.Tests.MapFile.Reader.pas',
   DX.Comply.Tests.ProjectScanner in 'DX.Comply.Tests.ProjectScanner.pas',
   DX.Comply.Tests.UnitResolver in 'DX.Comply.Tests.UnitResolver.pas',
   DX.Comply.Tests.CycloneDx.Writer in 'DX.Comply.Tests.CycloneDx.Writer.pas',

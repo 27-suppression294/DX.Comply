@@ -102,6 +102,10 @@ type
     [Test]
     procedure Scan_EngineDproj_WarningsListAssigned;
 
+    /// <summary>MapFilePath must be inferred from the output directory and project name.</summary>
+    [Test]
+    procedure Scan_EngineDproj_InfersMapFilePath;
+
     /// <summary>ProjectDir must be the src directory containing the dproj.</summary>
     [Test]
     procedure Scan_EngineDproj_ProjectDirIsValid;
@@ -282,6 +286,23 @@ begin
   try
     Assert.IsNotNull(LProjectInfo.Warnings,
       'Warnings must be assigned after scanning');
+  finally
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TProjectScannerTests.Scan_EngineDproj_InfersMapFilePath;
+var
+  LExpectedMapPath: string;
+  LProjectInfo: TProjectInfo;
+begin
+  LProjectInfo := FScanner.Scan(FEngineDprojPath, 'Win32', 'Debug');
+  try
+    LExpectedMapPath := TPath.Combine(LProjectInfo.OutputDir,
+      LProjectInfo.ProjectName + '.map');
+
+    Assert.AreEqual(LExpectedMapPath, LProjectInfo.MapFilePath,
+      'MapFilePath must be inferred from OutputDir and ProjectName');
   finally
     LProjectInfo.Free;
   end;

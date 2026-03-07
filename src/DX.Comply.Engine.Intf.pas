@@ -67,6 +67,8 @@ type
     DcpOutputDir: string;
     /// <summary>Output directory for generated compiled units (.dcu).</summary>
     DcuOutputDir: string;
+    /// <summary>Expected or resolved map file path for the selected build.</summary>
+    MapFilePath: string;
     /// <summary>Project version (if specified).</summary>
     Version: string;
     /// <summary>Resolved unit search paths for the selected platform/configuration.</summary>

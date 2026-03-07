@@ -21,8 +21,10 @@ interface
 
 uses
   System.Generics.Collections,
+  System.IOUtils,
   DX.Comply.Engine.Intf,
-  DX.Comply.BuildEvidence.Intf;
+  DX.Comply.BuildEvidence.Intf,
+  DX.Comply.MapFile.Reader;
 
 type
   /// <summary>
@@ -84,6 +86,8 @@ end;
 
 function TBuildEvidenceReader.Read(const AProjectInfo: TProjectInfo): TBuildEvidence;
 var
+  LMapUnitName: string;
+  LMapUnitNames: TArray<string>;
   LRuntimePackage: string;
 begin
   Result := TBuildEvidence.Create;
@@ -94,6 +98,7 @@ begin
   Result.Paths.DcuOutputDir := AProjectInfo.DcuOutputDir;
   Result.Paths.DcpOutputDir := AProjectInfo.DcpOutputDir;
   Result.Paths.BplOutputDir := AProjectInfo.BplOutputDir;
+  Result.Paths.MapFilePath := AProjectInfo.MapFilePath;
 
   CopyUniqueValues(AProjectInfo.SearchPaths, Result.SearchPaths);
   CopyUniqueValues(AProjectInfo.UnitScopeNames, Result.UnitScopeNames);
@@ -119,6 +124,23 @@ begin
   if AProjectInfo.BplOutputDir <> '' then
     AddEvidenceItem(Result, besProjectMetadata, 'BPL output directory',
       AProjectInfo.BplOutputDir, '', '', 'BplOutputDir');
+
+  if AProjectInfo.MapFilePath <> '' then
+  begin
+    AddEvidenceItem(Result, besProjectMetadata, 'Expected map file',
+      AProjectInfo.MapFilePath, '', '', 'MapFilePath');
+
+    if TFile.Exists(AProjectInfo.MapFilePath) then
+    begin
+      AddEvidenceItem(Result, besMapFile, 'Detailed map file',
+        AProjectInfo.MapFilePath, '', '', 'MapFile');
+
+      LMapUnitNames := TMapFileReader.ReadUnitNames(AProjectInfo.MapFilePath);
+      for LMapUnitName in LMapUnitNames do
+        AddEvidenceItem(Result, besMapFile, 'Unit from map file',
+          AProjectInfo.MapFilePath, '', LMapUnitName, 'LineNumbersSection');
+    end;
+  end;
 
   for LRuntimePackage in Result.RuntimePackages do
     AddEvidenceItem(Result, besProjectMetadata, 'Runtime package', '',

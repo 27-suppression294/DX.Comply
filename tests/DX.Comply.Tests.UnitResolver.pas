@@ -52,6 +52,12 @@ type
     /// </summary>
     [Test]
     procedure Resolve_StartsWithEmptyUnits;
+
+    /// <summary>
+    /// Map-file evidence items must become first resolved units.
+    /// </summary>
+    [Test]
+    procedure Resolve_WithMapEvidence_CreatesResolvedUnits;
   end;
 
 implementation
@@ -140,6 +146,46 @@ begin
     try
       Assert.AreEqual(0, LCompositionEvidence.Units.Count,
         'The initial resolver slice must return an empty unit list until unit closure logic exists');
+    finally
+      LCompositionEvidence.Free;
+    end;
+  finally
+    LBuildEvidence.Free;
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TUnitResolverTests.Resolve_WithMapEvidence_CreatesResolvedUnits;
+var
+  LEvidenceItem: TBuildEvidenceItem;
+  LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
+  LProjectInfo: TProjectInfo;
+begin
+  LProjectInfo := TProjectInfo.Create;
+  LBuildEvidence := TBuildEvidence.Create;
+  try
+    LBuildEvidence.Paths.MapFilePath := 'C:\Repo\build\Win32\Debug\DX.Comply.Engine.map';
+
+    LEvidenceItem := Default(TBuildEvidenceItem);
+    LEvidenceItem.SourceKind := besMapFile;
+    LEvidenceItem.FilePath := LBuildEvidence.Paths.MapFilePath;
+    LEvidenceItem.UnitName := 'DX.Comply.Engine';
+    LBuildEvidence.EvidenceItems.Add(LEvidenceItem);
+
+    LEvidenceItem.UnitName := 'System.SysUtils';
+    LBuildEvidence.EvidenceItems.Add(LEvidenceItem);
+
+    LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
+    try
+      Assert.AreEqual(2, LCompositionEvidence.Units.Count,
+        'Map-file evidence items must be transformed into resolved units');
+      Assert.AreEqual('DX.Comply.Engine', LCompositionEvidence.Units[0].UnitName,
+        'The first resolved unit must come from the first map evidence item');
+      Assert.AreEqual(rcStrong, LCompositionEvidence.Units[0].Confidence,
+        'Map-file membership should produce strong confidence for unit presence');
+      Assert.AreEqual(besMapFile, LCompositionEvidence.Units[0].EvidenceSources[0],
+        'Resolved units created from map evidence must retain besMapFile as their source');
     finally
       LCompositionEvidence.Free;
     end;

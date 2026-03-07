@@ -97,6 +97,10 @@ type
     /// </summary>
     function ResolveBuildPath(const ARawPath, AProjectDir, AProjectName: string): string;
     /// <summary>
+    /// Builds the expected map file path for the selected project build.
+    /// </summary>
+    function BuildExpectedMapFilePath(const AProjectInfo: TProjectInfo): string;
+    /// <summary>
     /// Adds semicolon-delimited values to a list, optionally normalizing them as paths.
     /// </summary>
     procedure AddDelimitedValues(const AValue: string; const AValues: TList<string>;
@@ -543,6 +547,15 @@ begin
   end;
 end;
 
+function TProjectScanner.BuildExpectedMapFilePath(const AProjectInfo: TProjectInfo): string;
+begin
+  Result := '';
+  if (AProjectInfo.OutputDir = '') or (AProjectInfo.ProjectName = '') then
+    Exit;
+
+  Result := TPath.Combine(AProjectInfo.OutputDir, AProjectInfo.ProjectName + '.map');
+end;
+
 function TProjectScanner.Scan(const AProjectPath, APlatform, AConfiguration: string): TProjectInfo;
 var
   LBplOutputDir: string;
@@ -632,6 +645,8 @@ begin
         Result.ProjectDir, Result.ProjectName);
       FWarnings.Add('No output directory found in .dproj. Using default: ..\build\$(Platform)\$(Config)');
     end;
+
+    Result.MapFilePath := BuildExpectedMapFilePath(Result);
 
     // Extract search paths and namespace scopes
     if Assigned(Result.SearchPaths) then

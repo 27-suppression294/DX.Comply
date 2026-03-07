@@ -33,6 +33,11 @@ type
     /// Copies unique warning entries from the source list into the target list.
     /// </summary>
     procedure CopyUniqueWarnings(const ASource, ATarget: TList<string>);
+    /// <summary>
+    /// Adds unique map-derived units to the composition evidence result.
+    /// </summary>
+    procedure AddMapDerivedUnits(const ABuildEvidence: TBuildEvidence;
+      var ACompositionEvidence: TCompositionEvidence);
   public
     /// <summary>
     /// Resolves the first-pass composition evidence envelope.
@@ -44,7 +49,8 @@ type
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils,
+  System.SysUtils;
 
 procedure TUnitResolver.CopyUniqueWarnings(const ASource, ATarget: TList<string>);
 var
@@ -60,6 +66,43 @@ begin
   end;
 end;
 
+procedure TUnitResolver.AddMapDerivedUnits(const ABuildEvidence: TBuildEvidence;
+  var ACompositionEvidence: TCompositionEvidence);
+var
+  LEvidenceItem: TBuildEvidenceItem;
+  LResolvedUnit: TResolvedUnitInfo;
+  LExistingResolvedUnit: TResolvedUnitInfo;
+  LIsDuplicate: Boolean;
+begin
+  for LEvidenceItem in ABuildEvidence.EvidenceItems do
+  begin
+    if (LEvidenceItem.SourceKind <> besMapFile) or (Trim(LEvidenceItem.UnitName) = '') then
+      Continue;
+
+    LIsDuplicate := False;
+    for LExistingResolvedUnit in ACompositionEvidence.Units do
+    begin
+      if SameText(LExistingResolvedUnit.UnitName, LEvidenceItem.UnitName) then
+      begin
+        LIsDuplicate := True;
+        Break;
+      end;
+    end;
+
+    if LIsDuplicate then
+      Continue;
+
+    LResolvedUnit := Default(TResolvedUnitInfo);
+    LResolvedUnit.UnitName := LEvidenceItem.UnitName;
+    LResolvedUnit.EvidenceKind := uekUnknown;
+    LResolvedUnit.OriginKind := uokUnknown;
+    LResolvedUnit.Confidence := rcStrong;
+    LResolvedUnit.ContainerPath := LEvidenceItem.FilePath;
+    LResolvedUnit.EvidenceSources := [besMapFile];
+    ACompositionEvidence.Units.Add(LResolvedUnit);
+  end;
+end;
+
 function TUnitResolver.Resolve(const AProjectInfo: TProjectInfo;
   const ABuildEvidence: TBuildEvidence): TCompositionEvidence;
 begin
@@ -72,6 +115,7 @@ begin
 
   CopyUniqueWarnings(AProjectInfo.Warnings, Result.Warnings);
   CopyUniqueWarnings(ABuildEvidence.Warnings, Result.Warnings);
+  AddMapDerivedUnits(ABuildEvidence, Result);
 end;
 
 end.

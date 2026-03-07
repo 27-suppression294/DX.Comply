@@ -5,6 +5,7 @@ Define the first concrete Delphi-facing model for build-evidence-driven unit res
 
 ## Design Principles
 - Use the real build as the source of truth.
+- Prefer an explicit Deep-Evidence build with detailed `.map` generation whenever possible.
 - Separate public engine contracts from deep evidence contracts.
 - Preserve ambiguity instead of hiding it.
 - Keep evidence provenance explicit and traceable.
@@ -78,6 +79,8 @@ Normalized paths for the selected platform/configuration.
 - `BplOutputDir`
 - `MapFilePath`
 - `ResponseFilePath`
+
+`MapFilePath` is important enough to be treated as a first-class build artefact path. In Deep-Evidence mode, the pipeline should prefer consuming a detailed `.map` file before falling back to weaker sources.
 
 ### `TBuildEvidenceItem`
 Represents one concrete evidence artifact or input.
@@ -163,6 +166,13 @@ Suggested methods:
 
 ## Evidence Resolution Rules
 
+### `.map`
+Use as the primary **membership** source when a detailed map file is available.
+
+- A detailed `.map` can prove that code from a unit ended up in the linked result.
+- A `.map` does **not** by itself prove whether the unit originated from `.pas`, `.dcu`, `.dcp`, or `.bpl`.
+- Therefore, `.map` should seed the unit set first, and representation/origin resolution should refine it afterwards.
+
 ### `.pas`
 Use when:
 - the active build inputs prove source compilation, or
@@ -204,7 +214,8 @@ This keeps `.dproj` parsing results reusable and avoids reparsing later phases.
 Recommended future pipeline:
 1. `IProjectScanner.Scan`
 2. `IBuildEvidenceReader.Read`
-3. `IUnitResolver.Resolve`
+3. if Deep Evidence is enabled, prefer `.map`-driven membership seeding
+4. `IUnitResolver.Resolve`
 4. `IOriginClassifier.Classify`
 5. `IHashService` for artefacts and unit evidence
 6. `ISbomWriter.Write`
@@ -221,6 +232,14 @@ To keep the first coding step small and safe, implement in this order:
 3. Implement `DX.Comply.BuildEvidence.Reader.pas` for `.dproj` + build-side evidence collection.
 4. Wire the reader into `TDxComplyGenerator` without yet changing SBOM output.
 5. Add `UnitResolver` after build evidence can already be inspected in tests/logs.
+
+## Next Implementation Slice
+The next resolver slice should:
+
+1. add `MapFilePath` to `TProjectInfo`
+2. introduce a dedicated `MapFileReader`
+3. let `BuildEvidenceReader` emit `besMapFile` evidence items from a detailed `.map`
+4. let `UnitResolver` create the first real `TResolvedUnitInfo` entries from `.map` membership evidence
 
 ## Non-Goals For The First Slice
 - Full parsing of every Delphi package format

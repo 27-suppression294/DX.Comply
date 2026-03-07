@@ -19,6 +19,8 @@ interface
 
 uses
   DUnitX.TestFramework,
+  System.IOUtils,
+  System.SysUtils,
   DX.Comply.Engine.Intf,
   DX.Comply.BuildEvidence.Intf,
   DX.Comply.BuildEvidence.Reader;
@@ -52,6 +54,12 @@ type
     /// </summary>
     [Test]
     procedure Read_ProjectInfo_CreatesEvidenceItems;
+
+    /// <summary>
+    /// A present detailed map file must become map-file evidence and unit evidence.
+    /// </summary>
+    [Test]
+    procedure Read_ProjectInfo_WithMapFile_CreatesMapEvidenceItems;
   end;
 
 implementation
@@ -146,6 +154,7 @@ begin
     LProjectInfo.Platform := 'Win32';
     LProjectInfo.Configuration := 'Debug';
     LProjectInfo.OutputDir := 'C:\Repo\build\Win32\Debug';
+    LProjectInfo.MapFilePath := 'C:\Repo\build\Win32\Debug\DX.Comply.Engine.map';
     LProjectInfo.RuntimePackages.Add('rtl');
 
     LBuildEvidence := FReader.Read(LProjectInfo);
@@ -156,11 +165,78 @@ begin
         'The first evidence item must be tagged as project metadata');
       Assert.AreEqual('Project metadata', LBuildEvidence.EvidenceItems[0].DisplayName,
         'The first evidence item must describe the project metadata source');
+      Assert.AreEqual(LProjectInfo.MapFilePath, LBuildEvidence.Paths.MapFilePath,
+        'MapFilePath must be copied into the build path set');
     finally
       LBuildEvidence.Free;
     end;
   finally
     LProjectInfo.Free;
+  end;
+end;
+
+procedure TBuildEvidenceReaderTests.Read_ProjectInfo_WithMapFile_CreatesMapEvidenceItems;
+var
+  LBuildEvidence: TBuildEvidence;
+  LHasDetailedMapItem: Boolean;
+  LHasEngineUnitItem: Boolean;
+  LHasSysUtilsUnitItem: Boolean;
+  LEvidenceItem: TBuildEvidenceItem;
+  LMapFilePath: string;
+  LProjectInfo: TProjectInfo;
+begin
+  LMapFilePath := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(LMapFilePath,
+      'Line numbers for DX.Comply.Engine(DX.Comply.Engine.pas) segment CODE' + sLineBreak +
+      'Line numbers for System.SysUtils(System.SysUtils.pas) segment CODE',
+      TEncoding.UTF8);
+
+    LProjectInfo := TProjectInfo.Create;
+    try
+      LProjectInfo.ProjectPath := 'C:\Repo\src\DX.Comply.Engine.dproj';
+      LProjectInfo.Platform := 'Win32';
+      LProjectInfo.Configuration := 'Debug';
+      LProjectInfo.MapFilePath := LMapFilePath;
+
+      LBuildEvidence := FReader.Read(LProjectInfo);
+      try
+        LHasDetailedMapItem := False;
+        LHasEngineUnitItem := False;
+        LHasSysUtilsUnitItem := False;
+
+        for LEvidenceItem in LBuildEvidence.EvidenceItems do
+        begin
+          if (LEvidenceItem.SourceKind = besMapFile) and
+             (LEvidenceItem.DisplayName = 'Detailed map file') then
+            LHasDetailedMapItem := True;
+
+          if (LEvidenceItem.SourceKind = besMapFile) and
+             (LEvidenceItem.UnitName = 'DX.Comply.Engine') then
+            LHasEngineUnitItem := True;
+
+          if (LEvidenceItem.SourceKind = besMapFile) and
+             (LEvidenceItem.UnitName = 'System.SysUtils') then
+            LHasSysUtilsUnitItem := True;
+        end;
+
+        Assert.IsTrue(LBuildEvidence.EvidenceItems.Count >= 4,
+          'The reader must emit metadata, detailed map, and per-unit map evidence items');
+        Assert.IsTrue(LHasDetailedMapItem,
+          'A present map file must become besMapFile evidence');
+        Assert.IsTrue(LHasEngineUnitItem,
+          'The first unit extracted from the map file must become evidence');
+        Assert.IsTrue(LHasSysUtilsUnitItem,
+          'The second unit extracted from the map file must become evidence');
+      finally
+        LBuildEvidence.Free;
+      end;
+    finally
+      LProjectInfo.Free;
+    end;
+  finally
+    if TFile.Exists(LMapFilePath) then
+      TFile.Delete(LMapFilePath);
   end;
 end;
 

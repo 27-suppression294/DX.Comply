@@ -30,6 +30,7 @@ The guiding principle is: **CRA minimum outside, deep Delphi evidence inside.**
 - DX.Comply should combine compiler inputs, linker/package side artefacts, and package metadata.
 - Static search-path resolution remains a fallback only when stronger evidence is missing.
 - Each resolved unit must carry a confidence level and the evidence sources that support the result.
+- For **Deep Evidence**, DX.Comply may explicitly trigger a build and require a detailed `.map` file as a primary linker evidence source.
 
 ## Technical Architecture
 
@@ -57,7 +58,7 @@ The guiding principle is: **CRA minimum outside, deep Delphi evidence inside.**
 ## Evidence Source Priority
 
 ### Strongest sources first
-1. IDE/CLI build evidence (actual compiler command line, response file, compile notifications)
+1. Explicit Deep-Evidence build evidence (actual compiler command line, response file, compile notifications, forced detailed `.map` output)
 2. Linker/package side artefacts (`.map`, `.dcp`, `.bpl`, generated `.dcu`)
 3. Project metadata (`.dproj`, runtime packages, output paths, search paths, unit scope names)
 4. Search-path-based resolution heuristics
@@ -106,9 +107,15 @@ Recommended first contracts:
 ### Phase 2 — Build evidence collection
 Implement a `BuildEvidenceReader` that gathers the strongest available proof of what was actually used in a build:
 - parse `.dproj` for search paths, package references, output folders, and compiler settings
+- determine the expected `.map` location for the selected build and read it when present
 - capture compiler command line / response file information when available
 - read linker/compiler side products such as `.map`, `.dcp`, `.bpl`, and output metadata when available
 - collect package-to-unit and binary-to-unit relationships where derivable
+
+Deep-Evidence preference:
+1. trigger or consume an explicit build with detailed `.map` output
+2. read `.map`-derived unit evidence first
+3. enrich with package metadata and search-path resolution only where the `.map` is silent
 
 Fallback order:
 1. compiler/linker evidence
@@ -128,6 +135,7 @@ Implement a `UnitResolver` that:
 - records ambiguous resolutions instead of hiding them
 
 Resolver rules:
+- use `.map`-derived unit membership as the first seed set when a detailed map is available
 - prefer build-proven representations over search-path guesses
 - keep multiple candidate sources until a stronger source removes ambiguity
 - attach the exact evidence source kinds used to reach a result
@@ -201,6 +209,7 @@ This service must stay logically separate from SBOM generation.
 
 ## Current-Engine Integration Notes
 - Extend `TProjectInfo` so later phases can carry search paths, unit scope names, and output directories without reparsing the `.dproj` multiple times.
+- Extend `TProjectInfo` with the expected or resolved `MapFilePath` so the reader and resolver can treat the `.map` as a first-class artefact.
 - Keep `TFileScanner` focused on shipped artefacts; do not overload it with unit-resolution logic.
 - Use `THashService` unchanged as the shared hash provider for both release artefacts and resolved unit evidence.
 - Refactor `TDxComplyGenerator.Generate` into an explicit pipeline:
