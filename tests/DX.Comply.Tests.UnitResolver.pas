@@ -18,6 +18,8 @@ unit DX.Comply.Tests.UnitResolver;
 interface
 
 uses
+  System.IOUtils,
+  System.SysUtils,
   DUnitX.TestFramework,
   DX.Comply.Engine.Intf,
   DX.Comply.BuildEvidence.Intf,
@@ -48,16 +50,34 @@ type
     procedure Resolve_MergesWarningsUniquely;
 
     /// <summary>
-    /// The initial resolver slice must not invent unit entries yet.
+    /// Without MAP-derived evidence there must not be any resolved units.
     /// </summary>
     [Test]
-    procedure Resolve_StartsWithEmptyUnits;
+    procedure Resolve_WithoutMapEvidence_ReturnsNoUnits;
 
     /// <summary>
     /// Map-file evidence items must become first resolved units.
     /// </summary>
     [Test]
     procedure Resolve_WithMapEvidence_CreatesResolvedUnits;
+
+    /// <summary>
+    /// Explicit project references must resolve local units authoritatively.
+    /// </summary>
+    [Test]
+    procedure Resolve_WithExplicitProjectUnitReference_ResolvesLocalUnit;
+
+    /// <summary>
+    /// Global toolchain DCU paths must win over Delphi source fallbacks.
+    /// </summary>
+    [Test]
+    procedure Resolve_WithGlobalToolchainDcuPath_PrefersDcuEvidence;
+
+    /// <summary>
+    /// Global toolchain roots must classify standard Delphi units as Embarcadero RTL.
+    /// </summary>
+    [Test]
+    procedure Resolve_WithGlobalToolchainSourcePath_ClassifiesEmbarcaderoRtl;
   end;
 
 implementation
@@ -80,6 +100,9 @@ begin
     LProjectInfo.Version := '1.2.3.4';
     LProjectInfo.Platform := 'Win64';
     LProjectInfo.Configuration := 'Release';
+    LProjectInfo.Toolchain.ProductName := 'Embarcadero Delphi';
+    LProjectInfo.Toolchain.Version := '37.0';
+    LProjectInfo.Toolchain.BuildVersion := '37.0.57242.3601';
 
     LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
     try
@@ -91,6 +114,10 @@ begin
         'Platform must be copied into the composition evidence envelope');
       Assert.AreEqual('Release', LCompositionEvidence.Configuration,
         'Configuration must be copied into the composition evidence envelope');
+      Assert.AreEqual('37.0', LCompositionEvidence.ToolchainVersion,
+        'ToolchainVersion must be copied into the composition evidence envelope');
+      Assert.AreEqual('37.0.57242.3601', LCompositionEvidence.ToolchainBuildVersion,
+        'ToolchainBuildVersion must be copied into the composition evidence envelope');
       Assert.IsTrue(LCompositionEvidence.GeneratedAt <> '',
         'GeneratedAt must be populated by the resolver');
     finally
@@ -133,7 +160,7 @@ begin
   end;
 end;
 
-procedure TUnitResolverTests.Resolve_StartsWithEmptyUnits;
+procedure TUnitResolverTests.Resolve_WithoutMapEvidence_ReturnsNoUnits;
 var
   LBuildEvidence: TBuildEvidence;
   LCompositionEvidence: TCompositionEvidence;
@@ -145,7 +172,7 @@ begin
     LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
     try
       Assert.AreEqual(NativeInt(0), NativeInt(LCompositionEvidence.Units.Count),
-        'The initial resolver slice must return an empty unit list until unit closure logic exists');
+        'Resolver must not invent units when no MAP-derived evidence is present');
     finally
       LCompositionEvidence.Free;
     end;
@@ -192,6 +219,178 @@ begin
   finally
     LBuildEvidence.Free;
     LProjectInfo.Free;
+  end;
+end;
+
+procedure TUnitResolverTests.Resolve_WithExplicitProjectUnitReference_ResolvesLocalUnit;
+var
+  LEvidenceItem: TBuildEvidenceItem;
+  LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
+  LProjectInfo: TProjectInfo;
+  LReference: TProjectUnitReference;
+  LTempDir: string;
+  LUnitPath: string;
+begin
+  LTempDir := TPath.Combine(TPath.GetTempPath, TPath.GetRandomFileName);
+  TDirectory.CreateDirectory(LTempDir);
+  try
+    LUnitPath := TPath.Combine(LTempDir, 'Demo.Main.pas');
+    TFile.WriteAllText(LUnitPath, 'unit Demo.Main;' + sLineBreak + 'interface' + sLineBreak + 'implementation' + sLineBreak + 'end.');
+
+    LProjectInfo := TProjectInfo.Create;
+    LBuildEvidence := TBuildEvidence.Create;
+    try
+      LProjectInfo.ProjectDir := LTempDir;
+      LReference.UnitName := 'Demo.Main';
+      LReference.FilePath := LUnitPath;
+      LReference.Source := 'MainSource';
+      LProjectInfo.ExplicitUnitReferences.Add(LReference);
+
+      LEvidenceItem := Default(TBuildEvidenceItem);
+      LEvidenceItem.SourceKind := besMapFile;
+      LEvidenceItem.FilePath := TPath.Combine(LTempDir, 'Demo.map');
+      LEvidenceItem.UnitName := 'Demo.Main';
+      LBuildEvidence.EvidenceItems.Add(LEvidenceItem);
+
+      LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
+      try
+        Assert.AreEqual(NativeInt(1), NativeInt(LCompositionEvidence.Units.Count));
+        Assert.AreEqual(LUnitPath, LCompositionEvidence.Units[0].ResolvedPath,
+          'Explicit project references must win over search path heuristics');
+        Assert.AreEqual(uokLocalProject, LCompositionEvidence.Units[0].OriginKind,
+          'Explicitly referenced local units must be classified as local project code');
+        Assert.AreEqual(uekPas, LCompositionEvidence.Units[0].EvidenceKind,
+          'A PAS file reference must resolve to PAS evidence');
+        Assert.AreEqual(rcAuthoritative, LCompositionEvidence.Units[0].Confidence,
+          'Explicit project references must be treated as authoritative evidence');
+      finally
+        LCompositionEvidence.Free;
+      end;
+    finally
+      LBuildEvidence.Free;
+      LProjectInfo.Free;
+    end;
+  finally
+    if TDirectory.Exists(LTempDir) then
+      TDirectory.Delete(LTempDir, True);
+  end;
+end;
+
+procedure TUnitResolverTests.Resolve_WithGlobalToolchainDcuPath_PrefersDcuEvidence;
+var
+  LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
+  LEvidenceItem: TBuildEvidenceItem;
+  LLibDebugRoot: string;
+  LProjectInfo: TProjectInfo;
+  LSourceRoot: string;
+  LTempDir: string;
+  LUnitDcuPath: string;
+  LUnitSourcePath: string;
+begin
+  LTempDir := TPath.Combine(TPath.GetTempPath, TPath.GetRandomFileName);
+  LLibDebugRoot := TPath.Combine(LTempDir, 'lib\Win32\debug');
+  LSourceRoot := TPath.Combine(LTempDir, 'source');
+  TDirectory.CreateDirectory(LLibDebugRoot);
+  TDirectory.CreateDirectory(TPath.Combine(LSourceRoot, 'rtl\sys'));
+  try
+    LUnitDcuPath := TPath.Combine(LLibDebugRoot, 'System.SysUtils.dcu');
+    TFile.WriteAllBytes(LUnitDcuPath, TBytes.Create($01, $02, $03, $04));
+
+    LUnitSourcePath := TPath.Combine(LSourceRoot, 'rtl\sys\System.SysUtils.pas');
+    TFile.WriteAllText(LUnitSourcePath,
+      'unit System.SysUtils;' + sLineBreak + 'interface' + sLineBreak +
+      'implementation' + sLineBreak + 'end.');
+
+    LProjectInfo := TProjectInfo.Create;
+    LBuildEvidence := TBuildEvidence.Create;
+    try
+      LProjectInfo.Toolchain.ProductName := 'Embarcadero Delphi';
+      LProjectInfo.Toolchain.RootDir := LTempDir;
+      LProjectInfo.Toolchain.Version := '37.0';
+      LProjectInfo.UsesDebugDCUs := True;
+      LProjectInfo.GlobalSearchPaths.Add(LLibDebugRoot);
+      LProjectInfo.GlobalSearchPaths.Add(LSourceRoot);
+
+      LEvidenceItem := Default(TBuildEvidenceItem);
+      LEvidenceItem.SourceKind := besMapFile;
+      LEvidenceItem.FilePath := TPath.Combine(LTempDir, 'Demo.map');
+      LEvidenceItem.UnitName := 'System.SysUtils';
+      LBuildEvidence.EvidenceItems.Add(LEvidenceItem);
+
+      LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
+      try
+        Assert.AreEqual(NativeInt(1), NativeInt(LCompositionEvidence.Units.Count));
+        Assert.AreEqual(LUnitDcuPath, LCompositionEvidence.Units[0].ResolvedPath,
+          'Toolchain DCU folders must be preferred over Delphi source fallbacks');
+        Assert.AreEqual(uekDcu, LCompositionEvidence.Units[0].EvidenceKind,
+          'A resolved RTL DCU must be classified as DCU evidence');
+        Assert.AreEqual(uokEmbarcaderoRtl, LCompositionEvidence.Units[0].OriginKind,
+          'Toolchain DCU hits below the Delphi root must remain classified as Embarcadero RTL');
+      finally
+        LCompositionEvidence.Free;
+      end;
+    finally
+      LBuildEvidence.Free;
+      LProjectInfo.Free;
+    end;
+  finally
+    if TDirectory.Exists(LTempDir) then
+      TDirectory.Delete(LTempDir, True);
+  end;
+end;
+
+procedure TUnitResolverTests.Resolve_WithGlobalToolchainSourcePath_ClassifiesEmbarcaderoRtl;
+var
+  LEvidenceItem: TBuildEvidenceItem;
+  LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
+  LProjectInfo: TProjectInfo;
+  LSourceRoot: string;
+  LTempDir: string;
+  LUnitPath: string;
+begin
+  LTempDir := TPath.Combine(TPath.GetTempPath, TPath.GetRandomFileName);
+  LSourceRoot := TPath.Combine(LTempDir, 'source');
+  TDirectory.CreateDirectory(TPath.Combine(LSourceRoot, 'rtl\sys'));
+  try
+    LUnitPath := TPath.Combine(LSourceRoot, 'rtl\sys\System.SysUtils.pas');
+    TFile.WriteAllText(LUnitPath, 'unit System.SysUtils;' + sLineBreak + 'interface' + sLineBreak + 'implementation' + sLineBreak + 'end.');
+
+    LProjectInfo := TProjectInfo.Create;
+    LBuildEvidence := TBuildEvidence.Create;
+    try
+      LProjectInfo.Toolchain.ProductName := 'Embarcadero Delphi';
+      LProjectInfo.Toolchain.RootDir := LTempDir;
+      LProjectInfo.Toolchain.Version := '37.0';
+      LProjectInfo.GlobalSearchPaths.Add(LSourceRoot);
+
+      LEvidenceItem := Default(TBuildEvidenceItem);
+      LEvidenceItem.SourceKind := besMapFile;
+      LEvidenceItem.FilePath := TPath.Combine(LTempDir, 'Demo.map');
+      LEvidenceItem.UnitName := 'System.SysUtils';
+      LBuildEvidence.EvidenceItems.Add(LEvidenceItem);
+
+      LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
+      try
+        Assert.AreEqual(NativeInt(1), NativeInt(LCompositionEvidence.Units.Count));
+        Assert.AreEqual(LUnitPath, LCompositionEvidence.Units[0].ResolvedPath,
+          'Standard Delphi units must resolve from the global toolchain search roots');
+        Assert.AreEqual(uokEmbarcaderoRtl, LCompositionEvidence.Units[0].OriginKind,
+          'Resolved System.* units below the Delphi root must be classified as Embarcadero RTL');
+        Assert.AreEqual(uekPas, LCompositionEvidence.Units[0].EvidenceKind,
+          'Toolchain source hits must resolve as PAS evidence');
+      finally
+        LCompositionEvidence.Free;
+      end;
+    finally
+      LBuildEvidence.Free;
+      LProjectInfo.Free;
+    end;
+  finally
+    if TDirectory.Exists(LTempDir) then
+      TDirectory.Delete(LTempDir, True);
   end;
 end;
 

@@ -38,6 +38,8 @@ uses
   System.IOUtils,
   System.RegularExpressions,
   System.Generics.Collections,
+  System.Win.Registry,
+  Winapi.Windows,
   DX.Comply.Engine.Intf;
 
 type
@@ -106,13 +108,69 @@ type
     procedure AddDelimitedValues(const AValue: string; const AValues: TList<string>;
       const AProjectDir, AProjectName: string; ANormalizeAsPath: Boolean);
     /// <summary>
+    /// Adds a path to the list only when it exists and is not already present.
+    /// </summary>
+    procedure AddExistingPath(const APath: string; const AValues: TList<string>);
+    /// <summary>
+    /// Adds a project unit reference if it is not already present.
+    /// </summary>
+    procedure AddProjectUnitReference(const AReference: TProjectUnitReference;
+      const AReferences: TProjectUnitReferenceList);
+    /// <summary>
+    /// Copies unique string values from one list into another.
+    /// </summary>
+    procedure CopyUniqueValues(const ASource, ATarget: TList<string>);
+    /// <summary>
+    /// Builds global Delphi library/source search roots for the detected toolchain.
+    /// </summary>
+    function BuildGlobalSearchPaths(const AToolchain: TDelphiToolchainInfo;
+      AUsesDebugDCUs: Boolean): TList<string>;
+    /// <summary>
+    /// Detects the latest installed Delphi version from the registry.
+    /// </summary>
+    function DetectLatestInstalledBdsVersion: string;
+    /// <summary>
+    /// Detects Delphi toolchain metadata for the current machine.
+    /// </summary>
+    function DetectToolchainInfo: TDelphiToolchainInfo;
+    /// <summary>
+    /// Extracts DCCReference include paths from the .dproj file.
+    /// </summary>
+    function ExtractDprojUnitReferences(const AProjectDir, AProjectName: string): TProjectUnitReferenceList;
+    /// <summary>
+    /// Extracts explicit unit references from all available project metadata sources.
+    /// </summary>
+    function ExtractExplicitUnitReferences(const AProjectPath, AProjectDir,
+      AProjectName, AMainSourcePath: string): TProjectUnitReferenceList;
+    /// <summary>
+    /// Extracts explicit unit references from the main .dpr / .dpk source file.
+    /// </summary>
+    function ExtractMainSourceUnitReferences(const AMainSourcePath, AProjectDir,
+      AProjectName: string): TProjectUnitReferenceList;
+    /// <summary>
+    /// Resolves the main source file of the project.
+    /// </summary>
+    function ExtractMainSourcePath(const AProjectPath, AProjectDir, AProjectName: string): string;
+    /// <summary>
     /// Extracts the effective unit search paths for the current platform/configuration.
     /// </summary>
     function ExtractSearchPaths(const AProjectDir, AProjectName: string): TList<string>;
     /// <summary>
+    /// Determines whether the selected build uses Delphi debug DCUs.
+    /// </summary>
+    function ExtractUseDebugDCUs: Boolean;
+    /// <summary>
+    /// Returns the root directory of the supplied Delphi version.
+    /// </summary>
+    function GetBdsRootDirForVersion(const AVersion: string): string;
+    /// <summary>
     /// Extracts the effective unit scope names for the current platform/configuration.
     /// </summary>
     function ExtractUnitScopeNames: TList<string>;
+    /// <summary>
+    /// Reads the fixed file version of the specified executable.
+    /// </summary>
+    function GetFileVersionText(const AFilePath: string): string;
     /// <summary>
     /// Attempts to detect the TargetedPlatforms bitmask and returns
     /// a list of platform names (Win32, Win64, etc.).
@@ -122,6 +180,10 @@ type
     /// Loads the .dproj file content, handling BOM and encoding correctly.
     /// </summary>
     procedure LoadProjectFile(const AProjectPath: string);
+    /// <summary>
+    /// Normalizes and resolves explicit project unit paths.
+    /// </summary>
+    function ResolveUnitReferencePath(const APath, AProjectDir, AProjectName: string): string;
   public
     constructor Create;
     destructor Destroy; override;
@@ -133,6 +195,21 @@ type
 implementation
 
 { TProjectScanner }
+
+procedure TProjectScanner.AddExistingPath(const APath: string; const AValues: TList<string>);
+var
+  LResolvedPath: string;
+begin
+  if not Assigned(AValues) then
+    Exit;
+
+  LResolvedPath := Trim(APath);
+  if (LResolvedPath = '') or not TDirectory.Exists(LResolvedPath) then
+    Exit;
+
+  if not AValues.Contains(LResolvedPath) then
+    AValues.Add(LResolvedPath);
+end;
 
 procedure TProjectScanner.AddDelimitedValues(const AValue: string; const AValues: TList<string>;
   const AProjectDir, AProjectName: string; ANormalizeAsPath: Boolean);
@@ -172,6 +249,38 @@ begin
 
     if not AValues.Contains(LResolvedItem) then
       AValues.Add(LResolvedItem);
+  end;
+end;
+
+procedure TProjectScanner.AddProjectUnitReference(const AReference: TProjectUnitReference;
+  const AReferences: TProjectUnitReferenceList);
+var
+  LExistingReference: TProjectUnitReference;
+begin
+  if not Assigned(AReferences) or (Trim(AReference.UnitName) = '') then
+    Exit;
+
+  for LExistingReference in AReferences do
+  begin
+    if SameText(LExistingReference.UnitName, AReference.UnitName) and
+       SameText(LExistingReference.FilePath, AReference.FilePath) then
+      Exit;
+  end;
+
+  AReferences.Add(AReference);
+end;
+
+procedure TProjectScanner.CopyUniqueValues(const ASource, ATarget: TList<string>);
+var
+  LValue: string;
+begin
+  if not Assigned(ASource) or not Assigned(ATarget) then
+    Exit;
+
+  for LValue in ASource do
+  begin
+    if not ATarget.Contains(LValue) then
+      ATarget.Add(LValue);
   end;
 end;
 
@@ -255,6 +364,221 @@ begin
     // Fall back to searching for properties with the config name in conditions
     Result := AConfigName;
   end;
+end;
+
+function TProjectScanner.DetectLatestInstalledBdsVersion: string;
+var
+  LMajor: Integer;
+  LMaxMajor: Integer;
+  LRegistry: TRegistry;
+  LVersionName: string;
+  LVersionNames: TStringList;
+  procedure CollectVersions(const AAccess: REGSAM);
+  begin
+    LRegistry.Access := KEY_READ or AAccess;
+    if not LRegistry.OpenKeyReadOnly('\SOFTWARE\Embarcadero\BDS') then
+      Exit;
+    try
+      LRegistry.GetKeyNames(LVersionNames);
+    finally
+      LRegistry.CloseKey;
+    end;
+  end;
+begin
+  Result := '';
+  LMaxMajor := -1;
+  LRegistry := TRegistry.Create;
+  LVersionNames := TStringList.Create;
+  try
+    LRegistry.RootKey := HKEY_LOCAL_MACHINE;
+    CollectVersions(KEY_WOW64_32KEY);
+    CollectVersions(KEY_WOW64_64KEY);
+
+    for LVersionName in LVersionNames do
+    begin
+      LMajor := StrToIntDef(LVersionName.Split(['.'])[0], -1);
+      if LMajor > LMaxMajor then
+      begin
+        LMaxMajor := LMajor;
+        Result := LVersionName;
+      end;
+    end;
+  finally
+    LVersionNames.Free;
+    LRegistry.Free;
+  end;
+end;
+
+function TProjectScanner.DetectToolchainInfo: TDelphiToolchainInfo;
+var
+  LBdsPath: string;
+  LVersion: string;
+begin
+  Result := Default(TDelphiToolchainInfo);
+
+  LBdsPath := Trim(GetEnvironmentVariable('BDS'));
+  if (LBdsPath <> '') and TDirectory.Exists(LBdsPath) then
+  begin
+    Result.RootDir := ExcludeTrailingPathDelimiter(TPath.GetFullPath(LBdsPath));
+    Result.Version := TPath.GetFileName(Result.RootDir);
+  end
+  else
+  begin
+    LVersion := DetectLatestInstalledBdsVersion;
+    Result.RootDir := GetBdsRootDirForVersion(LVersion);
+    Result.Version := LVersion;
+  end;
+
+  if Result.RootDir = '' then
+    Exit;
+
+  if Result.Version = '' then
+    Result.Version := TPath.GetFileName(Result.RootDir);
+
+  Result.ProductName := 'Embarcadero Delphi';
+  Result.BuildVersion := GetFileVersionText(TPath.Combine(Result.RootDir, 'bin\bds.exe'));
+end;
+
+function TProjectScanner.ExtractDprojUnitReferences(const AProjectDir,
+  AProjectName: string): TProjectUnitReferenceList;
+var
+  LIncludePath: string;
+  LMatch: TMatch;
+  LMatches: TMatchCollection;
+  LReference: TProjectUnitReference;
+begin
+  Result := TProjectUnitReferenceList.Create;
+  LMatches := TRegEx.Matches(FXmlText,
+    '<DCCReference\s+Include="([^"]+\.pas)"\s*/?>', [roIgnoreCase, roSingleLine]);
+  for LMatch in LMatches do
+  begin
+    if LMatch.Groups.Count < 2 then
+      Continue;
+
+    LIncludePath := Trim(LMatch.Groups[1].Value);
+    LReference := Default(TProjectUnitReference);
+    LReference.UnitName := TPath.GetFileNameWithoutExtension(LIncludePath);
+    LReference.FilePath := ResolveUnitReferencePath(LIncludePath, AProjectDir, AProjectName);
+    LReference.Source := 'DPROJ';
+    AddProjectUnitReference(LReference, Result);
+  end;
+end;
+
+function TProjectScanner.ExtractExplicitUnitReferences(const AProjectPath, AProjectDir,
+  AProjectName, AMainSourcePath: string): TProjectUnitReferenceList;
+var
+  LReference: TProjectUnitReference;
+  LReferences: TProjectUnitReferenceList;
+begin
+  Result := TProjectUnitReferenceList.Create;
+
+  if SameText(TPath.GetExtension(AProjectPath), '.dproj') then
+  begin
+    LReferences := ExtractDprojUnitReferences(AProjectDir, AProjectName);
+    try
+      for LReference in LReferences do
+        AddProjectUnitReference(LReference, Result);
+    finally
+      LReferences.Free;
+    end;
+  end;
+
+  LReferences := ExtractMainSourceUnitReferences(AMainSourcePath, AProjectDir, AProjectName);
+  try
+    for LReference in LReferences do
+      AddProjectUnitReference(LReference, Result);
+  finally
+    LReferences.Free;
+  end;
+end;
+
+function TProjectScanner.ExtractMainSourcePath(const AProjectPath, AProjectDir,
+  AProjectName: string): string;
+var
+  LCandidatePath: string;
+  LExtension: string;
+begin
+  Result := '';
+  LExtension := LowerCase(TPath.GetExtension(AProjectPath));
+  if (LExtension = '.dpr') or (LExtension = '.dpk') then
+    Exit(TPath.GetFullPath(AProjectPath));
+
+  LCandidatePath := GetElementValue(FXmlText, 'MainSource');
+  if LCandidatePath <> '' then
+    Result := ResolveUnitReferencePath(LCandidatePath, AProjectDir, AProjectName);
+
+  if (Result <> '') and TFile.Exists(Result) then
+    Exit;
+
+  LCandidatePath := TPath.Combine(AProjectDir, AProjectName + '.dpr');
+  if TFile.Exists(LCandidatePath) then
+    Exit(TPath.GetFullPath(LCandidatePath));
+
+  LCandidatePath := TPath.Combine(AProjectDir, AProjectName + '.dpk');
+  if TFile.Exists(LCandidatePath) then
+    Exit(TPath.GetFullPath(LCandidatePath));
+
+  Result := '';
+end;
+
+function TProjectScanner.ExtractMainSourceUnitReferences(const AMainSourcePath,
+  AProjectDir, AProjectName: string): TProjectUnitReferenceList;
+var
+  LContent: string;
+  LMatch: TMatch;
+  LMatches: TMatchCollection;
+  LReference: TProjectUnitReference;
+begin
+  Result := TProjectUnitReferenceList.Create;
+  if (Trim(AMainSourcePath) = '') or not TFile.Exists(AMainSourcePath) then
+    Exit;
+
+  LContent := TFile.ReadAllText(AMainSourcePath, TEncoding.UTF8);
+  LMatches := TRegEx.Matches(LContent,
+    '([A-Za-z0-9_.]+)\s+in\s+''([^'']+\.(?:pas|dcu|dcp|bpl))''',
+    [roIgnoreCase, roSingleLine]);
+
+  for LMatch in LMatches do
+  begin
+    if LMatch.Groups.Count < 3 then
+      Continue;
+
+    LReference := Default(TProjectUnitReference);
+    LReference.UnitName := Trim(LMatch.Groups[1].Value);
+    LReference.FilePath := ResolveUnitReferencePath(LMatch.Groups[2].Value,
+      AProjectDir, AProjectName);
+    LReference.Source := 'MainSource';
+    AddProjectUnitReference(LReference, Result);
+  end;
+end;
+
+function TProjectScanner.BuildGlobalSearchPaths(const AToolchain: TDelphiToolchainInfo;
+  AUsesDebugDCUs: Boolean): TList<string>;
+var
+  LAlternateConfigDir: string;
+  LBaseLibDir: string;
+  LPreferredConfigDir: string;
+begin
+  Result := TList<string>.Create;
+  if Trim(AToolchain.RootDir) = '' then
+    Exit;
+
+  LBaseLibDir := TPath.Combine(AToolchain.RootDir, 'lib\' + FCurrentPlatform);
+  if AUsesDebugDCUs then
+  begin
+    LPreferredConfigDir := TPath.Combine(LBaseLibDir, 'debug');
+    LAlternateConfigDir := TPath.Combine(LBaseLibDir, 'release');
+  end
+  else
+  begin
+    LPreferredConfigDir := TPath.Combine(LBaseLibDir, 'release');
+    LAlternateConfigDir := TPath.Combine(LBaseLibDir, 'debug');
+  end;
+
+  AddExistingPath(LPreferredConfigDir, Result);
+  AddExistingPath(LBaseLibDir, Result);
+  AddExistingPath(LAlternateConfigDir, Result);
+  AddExistingPath(TPath.Combine(AToolchain.RootDir, 'source'), Result);
 end;
 
 function TProjectScanner.DetectTargetedPlatforms: TArray<string>;
@@ -382,6 +706,76 @@ begin
     Result := Trim(LMatch.Groups[1].Value);
 end;
 
+function TProjectScanner.GetBdsRootDirForVersion(const AVersion: string): string;
+var
+  LRegistry: TRegistry;
+  procedure TryOpen(const AAccess: REGSAM);
+  begin
+    if Result <> '' then
+      Exit;
+
+    LRegistry.Access := KEY_READ or AAccess;
+    if not LRegistry.OpenKeyReadOnly('\SOFTWARE\Embarcadero\BDS\' + AVersion) then
+      Exit;
+    try
+      Result := Trim(LRegistry.ReadString('RootDir'));
+    finally
+      LRegistry.CloseKey;
+    end;
+  end;
+begin
+  Result := '';
+  if Trim(AVersion) = '' then
+    Exit;
+
+  LRegistry := TRegistry.Create;
+  try
+    LRegistry.RootKey := HKEY_LOCAL_MACHINE;
+    TryOpen(KEY_WOW64_32KEY);
+    TryOpen(KEY_WOW64_64KEY);
+    if (Result <> '') and TDirectory.Exists(Result) then
+      Result := ExcludeTrailingPathDelimiter(TPath.GetFullPath(Result))
+    else
+      Result := '';
+  finally
+    LRegistry.Free;
+  end;
+end;
+
+function TProjectScanner.GetFileVersionText(const AFilePath: string): string;
+var
+  LDummyHandle: DWORD;
+  LFixedInfo: PVSFixedFileInfo;
+  LInfoSize: DWORD;
+  LValueLength: UINT;
+  LVersionBuffer: TBytes;
+begin
+  Result := '';
+  if not TFile.Exists(AFilePath) then
+    Exit;
+
+  LDummyHandle := 0;
+  LInfoSize := GetFileVersionInfoSize(PChar(AFilePath), LDummyHandle);
+  if LInfoSize = 0 then
+    Exit;
+
+  SetLength(LVersionBuffer, LInfoSize);
+  if not GetFileVersionInfo(PChar(AFilePath), 0, LInfoSize, @LVersionBuffer[0]) then
+    Exit;
+
+  if not VerQueryValue(@LVersionBuffer[0], '\', Pointer(LFixedInfo), LValueLength) then
+    Exit;
+
+  if LValueLength < SizeOf(TVSFixedFileInfo) then
+    Exit;
+
+  Result := Format('%d.%d.%d.%d', [
+    HiWord(LFixedInfo.dwFileVersionMS),
+    LoWord(LFixedInfo.dwFileVersionMS),
+    HiWord(LFixedInfo.dwFileVersionLS),
+    LoWord(LFixedInfo.dwFileVersionLS)]);
+end;
+
 function TProjectScanner.GetPropertyValue(const AName, ADefault: string): string;
 var
   LBlock, LValue: string;
@@ -496,8 +890,20 @@ var
   LSearchPathValue: string;
 begin
   Result := TList<string>.Create;
+  AddExistingPath(AProjectDir, Result);
   LSearchPathValue := GetPropertyValue('DCC_UnitSearchPath', '');
   AddDelimitedValues(LSearchPathValue, Result, AProjectDir, AProjectName, True);
+end;
+
+function TProjectScanner.ExtractUseDebugDCUs: Boolean;
+var
+  LValue: string;
+begin
+  LValue := Trim(GetPropertyValue('DCC_DebugDCUs', ''));
+  if LValue = '' then
+    Exit(SameText(FCurrentConfig, 'Debug'));
+
+  Result := SameText(LValue, 'true') or SameText(LValue, '1');
 end;
 
 function TProjectScanner.ExtractUnitScopeNames: TList<string>;
@@ -526,6 +932,27 @@ begin
   if (LPath <> '') and (LPath[Length(LPath)] = '\') then
     LPath := Copy(LPath, 1, Length(LPath) - 1);
   Result := LPath;
+end;
+
+function TProjectScanner.ResolveUnitReferencePath(const APath, AProjectDir,
+  AProjectName: string): string;
+var
+  LPath: string;
+begin
+  Result := '';
+  if Trim(APath) = '' then
+    Exit;
+
+  LPath := NormalizePath(APath, AProjectName);
+  if (LPath <> '') and TPath.IsRelativePath(LPath) then
+    LPath := TPath.Combine(AProjectDir, LPath);
+
+  try
+    Result := TPath.GetFullPath(LPath);
+  except
+    Result := LPath;
+    FWarnings.Add('Could not resolve explicit unit reference path: ' + LPath);
+  end;
 end;
 
 function TProjectScanner.ResolveBuildPath(const ARawPath, AProjectDir, AProjectName: string): string;
@@ -592,6 +1019,7 @@ begin
 
     // Load the .dproj file with BOM-aware encoding detection
     LoadProjectFile(AProjectPath);
+    Result.MainSourcePath := ExtractMainSourcePath(AProjectPath, Result.ProjectDir, Result.ProjectName);
 
     LTargetedPlatforms := DetectTargetedPlatforms;
     LHasMatchingPlatform := False;
@@ -610,6 +1038,7 @@ begin
 
     // Detect the Cfg_N key for the requested configuration
     FConfigKey := DetectConfigKey(FCurrentConfig);
+    Result.UsesDebugDCUs := ExtractUseDebugDCUs;
 
     // Extract version — try VerInfo_MajorVer first (newer format), then MajorVer
     LMajor := GetPropertyValue('VerInfo_MajorVer', '');
@@ -667,10 +1096,30 @@ begin
 
     Result.MapFilePath := BuildExpectedMapFilePath(Result);
 
-    // Extract search paths and namespace scopes
+    // Extract explicit project unit references.
+    if Assigned(Result.ExplicitUnitReferences) then
+      Result.ExplicitUnitReferences.Free;
+    Result.ExplicitUnitReferences := ExtractExplicitUnitReferences(
+      AProjectPath, Result.ProjectDir, Result.ProjectName, Result.MainSourcePath);
+
+    // Resolve project-local and toolchain-level search roots.
+    if Assigned(Result.ProjectSearchPaths) then
+      Result.ProjectSearchPaths.Free;
+    Result.ProjectSearchPaths := ExtractSearchPaths(Result.ProjectDir, Result.ProjectName);
+
+    Result.Toolchain := DetectToolchainInfo;
+
+    if Assigned(Result.GlobalSearchPaths) then
+      Result.GlobalSearchPaths.Free;
+    Result.GlobalSearchPaths := BuildGlobalSearchPaths(Result.Toolchain,
+      Result.UsesDebugDCUs);
+
+    // Build the effective search path list in priority order: project first, toolchain second.
     if Assigned(Result.SearchPaths) then
       Result.SearchPaths.Free;
-    Result.SearchPaths := ExtractSearchPaths(Result.ProjectDir, Result.ProjectName);
+    Result.SearchPaths := TList<string>.Create;
+    CopyUniqueValues(Result.ProjectSearchPaths, Result.SearchPaths);
+    CopyUniqueValues(Result.GlobalSearchPaths, Result.SearchPaths);
 
     if Assigned(Result.UnitScopeNames) then
       Result.UnitScopeNames.Free;

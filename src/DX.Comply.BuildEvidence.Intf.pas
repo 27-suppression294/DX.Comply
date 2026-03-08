@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// DX.Comply.BuildEvidence.Intf
 /// Core contracts for build-evidence-driven unit resolution.
 /// </summary>
@@ -155,6 +155,10 @@ type
     Platform: string;
     Configuration: string;
     GeneratedAt: string;
+    ToolchainProductName: string;
+    ToolchainVersion: string;
+    ToolchainBuildVersion: string;
+    ToolchainRootDir: string;
     Units: TResolvedUnitList;
     Warnings: TList<string>;
     /// <summary>Initializes the record with owned list instances.</summary>

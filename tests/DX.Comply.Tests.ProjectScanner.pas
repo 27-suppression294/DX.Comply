@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// DX.Comply.Tests.ProjectScanner
 /// DUnitX tests for TProjectScanner.
 /// </summary>
@@ -109,6 +109,26 @@ type
     /// <summary>ProjectDir must be the src directory containing the dproj.</summary>
     [Test]
     procedure Scan_EngineDproj_ProjectDirIsValid;
+
+    /// <summary>MainSourcePath must resolve to the package source file.</summary>
+    [Test]
+    procedure Scan_EngineDproj_ExtractsMainSourcePath;
+
+    /// <summary>ExplicitUnitReferences must include engine package units.</summary>
+    [Test]
+    procedure Scan_EngineDproj_ExtractsExplicitUnitReferences;
+
+    /// <summary>Toolchain metadata and global search paths must be detected.</summary>
+    [Test]
+    procedure Scan_EngineDproj_DetectsToolchainMetadata;
+
+    /// <summary>Debug builds should prefer Delphi debug DCUs when no explicit override exists.</summary>
+    [Test]
+    procedure Scan_EngineDproj_DebugConfig_UsesDebugDCUs;
+
+    /// <summary>Release builds should prefer Delphi release DCUs when no explicit override exists.</summary>
+    [Test]
+    procedure Scan_EngineDproj_ReleaseConfig_DisablesDebugDCUs;
 
     /// <summary>When scanning with Win64, OutputDir must contain 'Win64'.</summary>
     [Test]
@@ -319,6 +339,117 @@ begin
     Assert.IsTrue(
       SameText(TPath.GetFileName(LProjectInfo.ProjectDir), 'src'),
       'ProjectDir must be the src folder');
+  finally
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TProjectScannerTests.Scan_EngineDproj_ExtractsMainSourcePath;
+var
+  LProjectInfo: TProjectInfo;
+begin
+  LProjectInfo := FScanner.Scan(FEngineDprojPath, 'Win32', 'Debug');
+  try
+    Assert.IsTrue(TFile.Exists(LProjectInfo.MainSourcePath),
+      'MainSourcePath must resolve to an existing .dpk or .dpr file');
+    Assert.IsTrue(SameText(TPath.GetFileName(LProjectInfo.MainSourcePath), 'DX.Comply.Engine.dpk'),
+      'The engine project must resolve its main package source file');
+  finally
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TProjectScannerTests.Scan_EngineDproj_ExtractsExplicitUnitReferences;
+var
+  LProjectInfo: TProjectInfo;
+  LReference: TProjectUnitReference;
+  LFound: Boolean;
+begin
+  LProjectInfo := FScanner.Scan(FEngineDprojPath, 'Win32', 'Debug');
+  try
+    Assert.IsNotNull(LProjectInfo.ExplicitUnitReferences,
+      'ExplicitUnitReferences must be assigned after scanning');
+    LFound := False;
+    for LReference in LProjectInfo.ExplicitUnitReferences do
+    begin
+      if not SameText(LReference.UnitName, 'DX.Comply.Engine.Intf') then
+        Continue;
+      LFound := True;
+      Assert.IsTrue(TFile.Exists(LReference.FilePath),
+        'Explicit engine package references must resolve to existing source files');
+      Break;
+    end;
+    Assert.IsTrue(LFound,
+      'The engine package must expose DX.Comply.Engine.Intf as an explicit unit reference');
+  finally
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TProjectScannerTests.Scan_EngineDproj_DetectsToolchainMetadata;
+var
+  LDebugDir: string;
+  LProjectInfo: TProjectInfo;
+  LSourceDir: string;
+begin
+  LProjectInfo := FScanner.Scan(FEngineDprojPath, 'Win32', 'Debug');
+  try
+    Assert.IsTrue(LProjectInfo.Toolchain.Version <> '',
+      'A Delphi version must be detected for the active toolchain');
+    Assert.IsTrue(LProjectInfo.Toolchain.BuildVersion <> '',
+      'A Delphi build version must be detected for the active toolchain');
+    Assert.IsTrue(TDirectory.Exists(LProjectInfo.Toolchain.RootDir),
+      'The detected Delphi toolchain root directory must exist');
+    Assert.IsNotNull(LProjectInfo.GlobalSearchPaths,
+      'GlobalSearchPaths must be assigned after scanning');
+    Assert.IsTrue(LProjectInfo.GlobalSearchPaths.Count > 0,
+      'The detected Delphi toolchain must contribute at least one global search root');
+
+    LDebugDir := TPath.Combine(LProjectInfo.Toolchain.RootDir, 'lib\Win32\debug');
+    LSourceDir := TPath.Combine(LProjectInfo.Toolchain.RootDir, 'source');
+    if TDirectory.Exists(LDebugDir) and TDirectory.Exists(LSourceDir) and
+      LProjectInfo.GlobalSearchPaths.Contains(LDebugDir) and
+      LProjectInfo.GlobalSearchPaths.Contains(LSourceDir) then
+      Assert.IsTrue(LProjectInfo.GlobalSearchPaths.IndexOf(LDebugDir) <
+        LProjectInfo.GlobalSearchPaths.IndexOf(LSourceDir),
+        'Toolchain debug DCU paths must be searched before Delphi source fallbacks');
+  finally
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TProjectScannerTests.Scan_EngineDproj_DebugConfig_UsesDebugDCUs;
+var
+  LProjectInfo: TProjectInfo;
+begin
+  LProjectInfo := FScanner.Scan(FEngineDprojPath, 'Win32', 'Debug');
+  try
+    Assert.IsTrue(LProjectInfo.UsesDebugDCUs,
+      'Debug builds must prefer Delphi debug DCUs unless the project explicitly disables them');
+  finally
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TProjectScannerTests.Scan_EngineDproj_ReleaseConfig_DisablesDebugDCUs;
+var
+  LProjectInfo: TProjectInfo;
+  LReleaseDir: string;
+  LSourceDir: string;
+begin
+  LProjectInfo := FScanner.Scan(FEngineDprojPath, 'Win32', 'Release');
+  try
+    Assert.IsFalse(LProjectInfo.UsesDebugDCUs,
+      'Release builds must prefer Delphi release DCUs unless the project explicitly enables debug DCUs');
+
+    LReleaseDir := TPath.Combine(LProjectInfo.Toolchain.RootDir, 'lib\Win32\release');
+    LSourceDir := TPath.Combine(LProjectInfo.Toolchain.RootDir, 'source');
+    if TDirectory.Exists(LReleaseDir) and TDirectory.Exists(LSourceDir) and
+      LProjectInfo.GlobalSearchPaths.Contains(LReleaseDir) and
+      LProjectInfo.GlobalSearchPaths.Contains(LSourceDir) then
+      Assert.IsTrue(LProjectInfo.GlobalSearchPaths.IndexOf(LReleaseDir) <
+        LProjectInfo.GlobalSearchPaths.IndexOf(LSourceDir),
+        'Toolchain release DCU paths must be searched before Delphi source fallbacks');
   finally
     LProjectInfo.Free;
   end;

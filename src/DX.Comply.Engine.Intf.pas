@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// DX.Comply.Engine.Intf
 /// Core interfaces for DX.Comply SBOM generation engine.
 /// </summary>
@@ -46,6 +46,37 @@ type
   TArtefactList = TList<TArtefactInfo>;
 
   /// <summary>
+  /// Explicit unit reference declared by the project model or main source file.
+  /// </summary>
+  TProjectUnitReference = record
+    /// <summary>Fully qualified unit name.</summary>
+    UnitName: string;
+    /// <summary>Resolved file path of the referenced unit.</summary>
+    FilePath: string;
+    /// <summary>Metadata source that declared the reference.</summary>
+    Source: string;
+  end;
+
+  /// <summary>
+  /// List of explicit project unit references.
+  /// </summary>
+  TProjectUnitReferenceList = TList<TProjectUnitReference>;
+
+  /// <summary>
+  /// Resolved Delphi toolchain metadata for the current project scan.
+  /// </summary>
+  TDelphiToolchainInfo = record
+    /// <summary>Toolchain product/vendor label.</summary>
+    ProductName: string;
+    /// <summary>Delphi product version, for example 37.0.</summary>
+    Version: string;
+    /// <summary>Build version taken from the installed IDE binary.</summary>
+    BuildVersion: string;
+    /// <summary>Root directory of the detected Delphi installation.</summary>
+    RootDir: string;
+  end;
+
+  /// <summary>
   /// Project metadata extracted from .dproj file.
   /// </summary>
   TProjectInfo = record
@@ -55,10 +86,14 @@ type
     ProjectPath: string;
     /// <summary>Project directory (containing folder).</summary>
     ProjectDir: string;
+    /// <summary>Main project source file (.dpr / .dpk) if it could be resolved.</summary>
+    MainSourcePath: string;
     /// <summary>Target platform (Win32, Win64, etc.).</summary>
     Platform: string;
     /// <summary>Build configuration (Debug, Release).</summary>
     Configuration: string;
+    /// <summary>True when the selected build is configured to use Delphi debug DCUs.</summary>
+    UsesDebugDCUs: Boolean;
     /// <summary>Output directory for build artefacts.</summary>
     OutputDir: string;
     /// <summary>Output directory for generated package binaries (.bpl).</summary>
@@ -71,12 +106,20 @@ type
     MapFilePath: string;
     /// <summary>Project version (if specified).</summary>
     Version: string;
-    /// <summary>Resolved unit search paths for the selected platform/configuration.</summary>
+    /// <summary>Effective unit search paths for the selected platform/configuration.</summary>
     SearchPaths: TList<string>;
+    /// <summary>Project-local unit search paths derived from the .dproj file.</summary>
+    ProjectSearchPaths: TList<string>;
+    /// <summary>Global Delphi library/source search roots in effective resolution order.</summary>
+    GlobalSearchPaths: TList<string>;
     /// <summary>Resolved unit scope names for the selected platform/configuration.</summary>
     UnitScopeNames: TList<string>;
     /// <summary>List of runtime package dependencies.</summary>
     RuntimePackages: TList<string>;
+    /// <summary>Explicit unit references declared by the project metadata.</summary>
+    ExplicitUnitReferences: TProjectUnitReferenceList;
+    /// <summary>Detected Delphi toolchain metadata.</summary>
+    Toolchain: TDelphiToolchainInfo;
     /// <summary>Warnings collected while scanning the project metadata.</summary>
     Warnings: TList<string>;
     /// <summary>Initializes the record with a new TList instance.</summary>
@@ -208,8 +251,11 @@ class function TProjectInfo.Create: TProjectInfo;
 begin
   Result := Default(TProjectInfo);
   Result.SearchPaths := TList<string>.Create;
+  Result.ProjectSearchPaths := TList<string>.Create;
+  Result.GlobalSearchPaths := TList<string>.Create;
   Result.UnitScopeNames := TList<string>.Create;
   Result.RuntimePackages := TList<string>.Create;
+  Result.ExplicitUnitReferences := TProjectUnitReferenceList.Create;
   Result.Warnings := TList<string>.Create;
 end;
 
@@ -219,6 +265,18 @@ begin
   begin
     SearchPaths.Free;
     SearchPaths := nil;
+  end;
+
+  if Assigned(ProjectSearchPaths) then
+  begin
+    ProjectSearchPaths.Free;
+    ProjectSearchPaths := nil;
+  end;
+
+  if Assigned(GlobalSearchPaths) then
+  begin
+    GlobalSearchPaths.Free;
+    GlobalSearchPaths := nil;
   end;
 
   if Assigned(UnitScopeNames) then
@@ -231,6 +289,12 @@ begin
   begin
     RuntimePackages.Free;
     RuntimePackages := nil;
+  end;
+
+  if Assigned(ExplicitUnitReferences) then
+  begin
+    ExplicitUnitReferences.Free;
+    ExplicitUnitReferences := nil;
   end;
 
   if Assigned(Warnings) then
