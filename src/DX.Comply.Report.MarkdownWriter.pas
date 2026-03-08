@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// DX.Comply.Report.MarkdownWriter
 /// Generates human-readable compliance reports in Markdown format.
 /// </summary>
@@ -32,8 +32,9 @@ type
     function EscapeMarkdown(const AValue: string): string;
     procedure AddKeyValue(Lines: TStrings; const AKey, AValue: string);
     procedure AddArtefacts(Lines: TStrings; const AData: TComplianceReportData);
-    procedure AddBuildEvidence(Lines: TStrings; const AData: TComplianceReportData);
-    procedure AddCompositionEvidence(Lines: TStrings; const AData: TComplianceReportData);
+    procedure AddBuildEvidenceSources(Lines: TStrings; const AData: TComplianceReportData);
+    procedure AddUnitEvidence(Lines: TStrings; const AData: TComplianceReportData;
+      const AConfig: THumanReadableReportConfig);
     procedure AddWarnings(Lines: TStrings; const AData: TComplianceReportData);
     procedure AddValidation(Lines: TStrings; const AData: TComplianceReportData);
   public
@@ -65,37 +66,101 @@ begin
   Lines.Add('');
 end;
 
-procedure TMarkdownReportWriter.AddBuildEvidence(Lines: TStrings; const AData: TComplianceReportData);
+procedure TMarkdownReportWriter.AddBuildEvidenceSources(Lines: TStrings; const AData: TComplianceReportData);
 var
   LEvidenceItem: TBuildEvidenceItem;
+  LHasRows: Boolean;
 begin
-  Lines.Add('## Build Evidence');
+  LHasRows := False;
+  Lines.Add('## Build Evidence Sources');
   Lines.Add('| Source | Display Name | Unit / Package | Detail |');
   Lines.Add('| --- | --- | --- | --- |');
   for LEvidenceItem in AData.BuildEvidence.EvidenceItems do
+  begin
+    if Trim(LEvidenceItem.UnitName) <> '' then
+      Continue;
+
+    LHasRows := True;
     Lines.Add(Format('| %s | %s | %s | %s |', [
       EscapeMarkdown(BuildEvidenceSourceKindToString(LEvidenceItem.SourceKind)),
       EscapeMarkdown(SafeText(LEvidenceItem.DisplayName)),
       EscapeMarkdown(SafeText(LEvidenceItem.UnitName, SafeText(LEvidenceItem.PackageName))),
       EscapeMarkdown(SafeText(LEvidenceItem.Detail, LEvidenceItem.FilePath))]));
+  end;
+
+  if not LHasRows then
+    Lines.Add('| n/a | n/a | n/a | No non-unit build evidence sources recorded. |');
   Lines.Add('');
 end;
 
-procedure TMarkdownReportWriter.AddCompositionEvidence(Lines: TStrings; const AData: TComplianceReportData);
+procedure TMarkdownReportWriter.AddUnitEvidence(Lines: TStrings;
+  const AData: TComplianceReportData; const AConfig: THumanReadableReportConfig);
 var
-  LUnit: TResolvedUnitInfo;
+  LRow: TConsolidatedUnitEvidenceRow;
+  LRows: TConsolidatedUnitEvidenceRowList;
+  function Checkmark(const AValue: Boolean): string;
+  begin
+    if AValue then
+      Exit('✓');
+    Result := '';
+  end;
 begin
-  Lines.Add('## Composition Evidence');
-  Lines.Add('| Unit | Origin | Evidence | Confidence | Location |');
-  Lines.Add('| --- | --- | --- | --- | --- |');
-  for LUnit in AData.CompositionEvidence.Units do
-    Lines.Add(Format('| %s | %s | %s | %s | %s |', [
-      EscapeMarkdown(SafeText(LUnit.UnitName)),
-      EscapeMarkdown(UnitOriginKindToString(LUnit.OriginKind)),
-      EscapeMarkdown(UnitEvidenceKindToString(LUnit.EvidenceKind)),
-      EscapeMarkdown(ResolutionConfidenceToString(LUnit.Confidence)),
-      EscapeMarkdown(SafeText(LUnit.ResolvedPath, SafeText(LUnit.ContainerPath)))]));
-  Lines.Add('');
+  LRows := BuildConsolidatedUnitEvidenceRows(AData);
+  try
+    Lines.Add('## Unit Evidence');
+    if (not AConfig.IncludeCompositionEvidence) and (not AConfig.IncludeBuildEvidence) then
+    begin
+      Lines.Add('- Unit evidence output is disabled.');
+      Lines.Add('');
+      Exit;
+    end;
+
+    if AConfig.IncludeCompositionEvidence and AConfig.IncludeBuildEvidence then
+    begin
+      Lines.Add('| Unit | Origin | Evidence | Confidence | Composition Evidence | Build Evidence | Location |');
+      Lines.Add('| --- | --- | --- | --- | :---: | :---: | --- |');
+      for LRow in LRows do
+        Lines.Add(Format('| %s | %s | %s | %s | %s | %s | %s |', [
+          EscapeMarkdown(SafeText(LRow.UnitName)),
+          EscapeMarkdown(SafeText(LRow.Origin)),
+          EscapeMarkdown(SafeText(LRow.Evidence)),
+          EscapeMarkdown(SafeText(LRow.Confidence)),
+          Checkmark(LRow.HasCompositionEvidence),
+          Checkmark(LRow.HasBuildEvidence),
+          EscapeMarkdown(SafeText(LRow.Location))]));
+    end
+    else if AConfig.IncludeCompositionEvidence then
+    begin
+      Lines.Add('| Unit | Origin | Evidence | Confidence | Composition Evidence | Location |');
+      Lines.Add('| --- | --- | --- | --- | :---: | --- |');
+      for LRow in LRows do
+        if LRow.HasCompositionEvidence then
+          Lines.Add(Format('| %s | %s | %s | %s | %s | %s |', [
+            EscapeMarkdown(SafeText(LRow.UnitName)),
+            EscapeMarkdown(SafeText(LRow.Origin)),
+            EscapeMarkdown(SafeText(LRow.Evidence)),
+            EscapeMarkdown(SafeText(LRow.Confidence)),
+            Checkmark(True),
+            EscapeMarkdown(SafeText(LRow.Location))]));
+    end
+    else
+    begin
+      Lines.Add('| Unit | Origin | Evidence | Confidence | Build Evidence | Location |');
+      Lines.Add('| --- | --- | --- | --- | :---: | --- |');
+      for LRow in LRows do
+        if LRow.HasBuildEvidence then
+          Lines.Add(Format('| %s | %s | %s | %s | %s | %s |', [
+            EscapeMarkdown(SafeText(LRow.UnitName)),
+            EscapeMarkdown(SafeText(LRow.Origin)),
+            EscapeMarkdown(SafeText(LRow.Evidence)),
+            EscapeMarkdown(SafeText(LRow.Confidence)),
+            Checkmark(True),
+            EscapeMarkdown(SafeText(LRow.Location))]));
+    end;
+    Lines.Add('');
+  finally
+    LRows.Free;
+  end;
 end;
 
 procedure TMarkdownReportWriter.AddKeyValue(Lines: TStrings; const AKey, AValue: string);
@@ -159,7 +224,18 @@ begin
     LWarningsCount := AData.Warnings.Count;
   Lines := TStringList.Create;
   try
-    Lines.Add('# DX.Comply Human-Readable Compliance Report');
+    Lines.Add('# ' + HumanReadableReportTitle);
+    Lines.Add('');
+    Lines.Add('_' + HumanReadableReportSubtitle + '_');
+    Lines.Add('');
+    Lines.Add('## Report Context');
+    Lines.Add('| Field | Value |');
+    Lines.Add('| --- | --- |');
+    AddKeyValue(Lines, 'Generated By', HumanReadableReportGenerator);
+    AddKeyValue(Lines, 'Repository / Project Root', RepositoryReferenceText(AData.ProjectInfo));
+    AddKeyValue(Lines, 'Project File', SafeText(AData.ProjectInfo.ProjectPath));
+    AddKeyValue(Lines, 'Formal SBOM', SafeText(AData.SbomOutputPath));
+    AddKeyValue(Lines, 'Generated At', SafeText(AData.Metadata.Timestamp, AData.CompositionEvidence.GeneratedAt));
     Lines.Add('');
     Lines.Add('## Project Overview');
     Lines.Add('| Field | Value |');
@@ -168,9 +244,12 @@ begin
     AddKeyValue(Lines, 'Version', SafeText(AData.Metadata.ProductVersion, SafeText(AData.ProjectInfo.Version)));
     AddKeyValue(Lines, 'Platform', SafeText(AData.ProjectInfo.Platform));
     AddKeyValue(Lines, 'Configuration', SafeText(AData.ProjectInfo.Configuration));
+    AddKeyValue(Lines, 'Delphi Toolchain', SafeText(AData.ProjectInfo.Toolchain.ProductName));
+    AddKeyValue(Lines, 'Delphi Version', SafeText(AData.ProjectInfo.Toolchain.Version));
+    AddKeyValue(Lines, 'Delphi Build', SafeText(AData.ProjectInfo.Toolchain.BuildVersion));
     AddKeyValue(Lines, 'SBOM Format', SbomFormatToString(AData.SbomFormat));
-    AddKeyValue(Lines, 'Formal SBOM', AData.SbomOutputPath);
-    AddKeyValue(Lines, 'Generated At', SafeText(AData.Metadata.Timestamp, AData.CompositionEvidence.GeneratedAt));
+    if Trim(AData.ProjectInfo.Toolchain.RootDir) <> '' then
+      AddKeyValue(Lines, 'Toolchain Root', AData.ProjectInfo.Toolchain.RootDir);
     Lines.Add('');
     Lines.Add('## Summary');
     Lines.Add('| Metric | Value |');
@@ -184,10 +263,10 @@ begin
     Lines.Add('');
     AddValidation(Lines, AData);
     AddArtefacts(Lines, AData);
-    if AConfig.IncludeCompositionEvidence then
-      AddCompositionEvidence(Lines, AData);
+    if AConfig.IncludeCompositionEvidence or AConfig.IncludeBuildEvidence then
+      AddUnitEvidence(Lines, AData, AConfig);
     if AConfig.IncludeBuildEvidence then
-      AddBuildEvidence(Lines, AData);
+      AddBuildEvidenceSources(Lines, AData);
     if AConfig.IncludeWarnings then
       AddWarnings(Lines, AData);
     Lines.SaveToFile(AOutputPath, TEncoding.UTF8);
