@@ -1,4 +1,4 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <Base>True</Base>
         <AppType>Application</AppType>
@@ -98,6 +98,7 @@
         <DCCReference Include="DX.Comply.Tests.Spdx.Writer.pas"/>
         <DCCReference Include="DX.Comply.Tests.Schema.Validator.pas"/>
         <DCCReference Include="DX.Comply.Tests.IDE.Settings.pas"/>
+        <DCCReference Include="DX.Comply.Tests.IDE.ReadmeSupport.pas"/>
         <DCCReference Include="DX.Comply.Tests.Engine.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
