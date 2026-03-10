@@ -1,12 +1,12 @@
 ﻿/// <summary>
-/// dxcomply
-/// Command-line entry point for DX.Comply SBOM generation.
+/// DX.Comply.CLI
+/// Command-line entry point for DX.Comply SBOM generation in CI/CD workflows.
 /// </summary>
 ///
 /// <remarks>
 /// Parses command-line arguments via TCliOptions, constructs a
 /// TDxComplyGenerator with the resulting TSbomConfig, and writes the SBOM to
-/// the requested output path.
+/// the requested output path so pipeline runs do not depend on the IDE plugin.
 ///
 /// Exit codes:
 ///   0 - SBOM generated successfully
@@ -23,7 +23,7 @@ program dxcomply;
 
 {$APPTYPE CONSOLE}
 
-{$R *.res}
+{$R 'DX.Comply.CLI.res'}
 
 uses
   System.SysUtils,

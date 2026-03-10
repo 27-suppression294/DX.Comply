@@ -4,10 +4,10 @@
         <AppType>Application</AppType>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <FrameworkType>None</FrameworkType>
-        <MainSource>ExampleApp.dpr</MainSource>
+        <MainSource>DX.Comply.CLI.dpr</MainSource>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
-        <ProjectGuid>{E4F5A6B7-C8D9-4E0F-1A2B-3C4D5E6F7A8B}</ProjectGuid>
-        <ProjectName Condition="'$(ProjectName)'==''">ExampleApp</ProjectName>
+        <ProjectGuid>{D3E4F5A6-B7C8-4D9E-0F1A-2B3C4D5E6F7A}</ProjectGuid>
+        <ProjectName Condition="'$(ProjectName)'==''">dxcomply</ProjectName>
         <ProjectVersion>20.3</ProjectVersion>
         <TargetedPlatforms>3</TargetedPlatforms>
     </PropertyGroup>
@@ -24,74 +24,71 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
+    <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
         <Cfg_1>true</Cfg_1>
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
+    <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_2)'!=''">
         <Cfg_2>true</Cfg_2>
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <SanitizedProjectName>ExampleApp</SanitizedProjectName>
-        <DCC_DcpOutput>..\..\build\$(Platform)\$(Config)\dcu</DCC_DcpOutput>
+        <SanitizedProjectName>dxcomply</SanitizedProjectName>
         <DCC_DcuOutput>..\..\build\$(Platform)\$(Config)\dcu</DCC_DcuOutput>
-        <DCC_Description>DX.Comply Example Application</DCC_Description>
+        <DCC_Description>DX.Comply CI Pipeline CLI</DCC_Description>
         <DCC_ExeOutput>..\..\build\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_UnitSearchPath>..\..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Build>0</VerInfo_Build>
+        <VerInfo_DLL>False</VerInfo_DLL>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply Example Application;FileVersion=1.0.0.0;InternalName=ExampleApp;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=ExampleApp.exe;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply CI Pipeline CLI;FileVersion=1.0.0.0;InternalName=dxcomply;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=dxcomply.exe;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
         <VerInfo_Locale>1031</VerInfo_Locale>
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <AppEnableHighDPI>true</AppEnableHighDPI>
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <DCC_UsePackage>rtl;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply Example Application;FileVersion=1.0.0.0;InternalName=ExampleApp;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=ExampleApp.exe;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply CI Pipeline CLI;FileVersion=1.0.0.0;InternalName=dxcomply;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=dxcomply.exe;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <AppEnableHighDPI>true</AppEnableHighDPI>
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <DCC_UsePackage>rtl;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply Example Application;FileVersion=1.0.0.0;InternalName=ExampleApp;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=ExampleApp.exe;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply CI Pipeline CLI;FileVersion=1.0.0.0;InternalName=dxcomply;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=dxcomply.exe;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
-        <DCC_DebugInformation>0</DCC_DebugInformation>
-        <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
-        <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
-        <DCC_Optimize>true</DCC_Optimize>
-        <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_DebugInformation>1</DCC_DebugInformation>
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
         <DCC_LocalDebugSymbols>true</DCC_LocalDebugSymbols>
         <DCC_Optimize>false</DCC_Optimize>
         <DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_2)'!=''">
+        <DCC_DebugInformation>0</DCC_DebugInformation>
+        <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+        <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
+        <DCC_Optimize>true</DCC_Optimize>
+        <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+    </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="DX.Comply.CLI.Options.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
-        <BuildConfiguration Include="Release">
+        <BuildConfiguration Include="Debug">
             <Key>Cfg_1</Key>
             <CfgParent>Base</CfgParent>
         </BuildConfiguration>
-        <BuildConfiguration Include="Debug">
+        <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
         </BuildConfiguration>
@@ -102,8 +99,35 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">ExampleApp.dpr</Source>
+                    <Source Name="MainSource">DX.Comply.CLI.dpr</Source>
                 </Source>
+                <VersionInfo>
+                    <VersionInfo Name="IncludeVerInfo">True</VersionInfo>
+                    <VersionInfo Name="AutoIncBuild">False</VersionInfo>
+                    <VersionInfo Name="MajorVer">1</VersionInfo>
+                    <VersionInfo Name="MinorVer">0</VersionInfo>
+                    <VersionInfo Name="Release">0</VersionInfo>
+                    <VersionInfo Name="Build">0</VersionInfo>
+                    <VersionInfo Name="Debug">False</VersionInfo>
+                    <VersionInfo Name="PreRelease">False</VersionInfo>
+                    <VersionInfo Name="Special">False</VersionInfo>
+                    <VersionInfo Name="Private">False</VersionInfo>
+                    <VersionInfo Name="DLL">False</VersionInfo>
+                    <VersionInfo Name="Locale">1031</VersionInfo>
+                    <VersionInfo Name="CodePage">1252</VersionInfo>
+                </VersionInfo>
+                <VersionInfoKeys>
+                    <VersionInfoKey Name="CompanyName">Olaf Monien</VersionInfoKey>
+                    <VersionInfoKey Name="FileDescription">DX.Comply CI Pipeline CLI</VersionInfoKey>
+                    <VersionInfoKey Name="FileVersion">1.0.0.0</VersionInfoKey>
+                    <VersionInfoKey Name="InternalName">dxcomply</VersionInfoKey>
+                    <VersionInfoKey Name="LegalCopyright">Copyright © 2026 Olaf Monien</VersionInfoKey>
+                    <VersionInfoKey Name="LegalTrademarks"/>
+                    <VersionInfoKey Name="OriginalFilename">dxcomply.exe</VersionInfoKey>
+                    <VersionInfoKey Name="ProductName">DX.Comply</VersionInfoKey>
+                    <VersionInfoKey Name="ProductVersion">1.0.0.0</VersionInfoKey>
+                    <VersionInfoKey Name="Comments">MIT License</VersionInfoKey>
+                </VersionInfoKeys>
             </Delphi.Personality>
             <Platforms>
                 <Platform value="Android">False</Platform>
@@ -114,33 +138,6 @@
                 <Platform value="iOSDevice64">False</Platform>
                 <Platform value="iOSSimARM64">False</Platform>
             </Platforms>
-            <VersionInfo>
-                <VersionInfo Name="IncludeVerInfo">True</VersionInfo>
-                <VersionInfo Name="AutoIncBuild">False</VersionInfo>
-                <VersionInfo Name="MajorVer">1</VersionInfo>
-                <VersionInfo Name="MinorVer">0</VersionInfo>
-                <VersionInfo Name="Release">0</VersionInfo>
-                <VersionInfo Name="Build">0</VersionInfo>
-                <VersionInfo Name="Debug">False</VersionInfo>
-                <VersionInfo Name="PreRelease">False</VersionInfo>
-                <VersionInfo Name="Special">False</VersionInfo>
-                <VersionInfo Name="Private">False</VersionInfo>
-                <VersionInfo Name="DLL">False</VersionInfo>
-                <VersionInfo Name="Locale">1031</VersionInfo>
-                <VersionInfo Name="CodePage">1252</VersionInfo>
-            </VersionInfo>
-            <VersionInfoKeys>
-                <VersionInfoKey Name="CompanyName">Olaf Monien</VersionInfoKey>
-                <VersionInfoKey Name="FileDescription">DX.Comply Example Application</VersionInfoKey>
-                <VersionInfoKey Name="FileVersion">1.0.0.0</VersionInfoKey>
-                <VersionInfoKey Name="InternalName">ExampleApp</VersionInfoKey>
-                <VersionInfoKey Name="LegalCopyright">Copyright © 2026 Olaf Monien</VersionInfoKey>
-                <VersionInfoKey Name="LegalTrademarks"/>
-                <VersionInfoKey Name="OriginalFilename">ExampleApp.exe</VersionInfoKey>
-                <VersionInfoKey Name="ProductName">DX.Comply</VersionInfoKey>
-                <VersionInfoKey Name="ProductVersion">1.0.0.0</VersionInfoKey>
-                <VersionInfoKey Name="Comments">MIT License</VersionInfoKey>
-            </VersionInfoKeys>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
     </ProjectExtensions>

@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// DX.Comply.CLI.Options
 /// Command-line argument parsing for the dxcomply CLI tool.
 /// </summary>
