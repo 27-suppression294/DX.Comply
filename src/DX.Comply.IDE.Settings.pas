@@ -36,6 +36,7 @@ type
     SaveAllModifiedFilesBeforeBuild: Boolean;
     UseActiveBuildConfiguration: Boolean;
     ContinueWithoutDeepEvidenceOnBuildFailure: Boolean;
+    OpenHtmlReportAfterGenerate: Boolean;
     WarnWhenCompositionEvidenceIsEmpty: Boolean;
     BuildScriptPath: string;
     DelphiVersionOverride: Integer;
@@ -64,9 +65,20 @@ type
       const ASettings: TDXComplyIDESettings); static;
   end;
 
+/// <summary>
+/// Returns the caption used for the single DX.Comply node in the IDE options tree.
+/// </summary>
+function DXComplyOptionsPageCaption: string;
+
+/// <summary>
+/// Scales a design-time pixel value from 96 PPI to the requested target PPI.
+/// </summary>
+function DXComplyScaleDesignValue(const AValue, APixelsPerInch: Integer): Integer;
+
 implementation
 
 uses
+  Winapi.Windows,
   System.IniFiles,
   System.IOUtils;
 
@@ -77,15 +89,32 @@ const
 
 class function TDXComplyIDESettings.Default: TDXComplyIDESettings;
 begin
-  Result.AutoBuildMode := abmDisabled;
+  Result.AutoBuildMode := abmAlways;
   Result.PromptBeforeBuild := True;
   Result.SaveAllModifiedFilesBeforeBuild := True;
   Result.UseActiveBuildConfiguration := True;
-  Result.ContinueWithoutDeepEvidenceOnBuildFailure := True;
+  Result.ContinueWithoutDeepEvidenceOnBuildFailure := False;
+  Result.OpenHtmlReportAfterGenerate := True;
   Result.WarnWhenCompositionEvidenceIsEmpty := True;
   Result.BuildScriptPath := '';
   Result.DelphiVersionOverride := 0;
   Result.HumanReadableReport := THumanReadableReportConfig.Default;
+  Result.HumanReadableReport.Enabled := True;
+  Result.HumanReadableReport.Format := hrfBoth;
+end;
+
+function DXComplyOptionsPageCaption: string;
+begin
+  // ToolsAPI uses '.' as a hierarchy separator inside the options tree.
+  Result := 'DX' + #$2024 + 'Comply';
+end;
+
+function DXComplyScaleDesignValue(const AValue, APixelsPerInch: Integer): Integer;
+begin
+  if APixelsPerInch <= 0 then
+    Exit(AValue);
+
+  Result := MulDiv(AValue, APixelsPerInch, USER_DEFAULT_SCREEN_DPI);
 end;
 
 { TDXComplyIDESettingsStore }
@@ -147,6 +176,7 @@ begin
     Result.SaveAllModifiedFilesBeforeBuild := LIniFile.ReadBool(cSettingsSection, 'SaveAllModifiedFilesBeforeBuild', Result.SaveAllModifiedFilesBeforeBuild);
     Result.UseActiveBuildConfiguration := LIniFile.ReadBool(cSettingsSection, 'UseActiveBuildConfiguration', Result.UseActiveBuildConfiguration);
     Result.ContinueWithoutDeepEvidenceOnBuildFailure := LIniFile.ReadBool(cSettingsSection, 'ContinueWithoutDeepEvidenceOnBuildFailure', Result.ContinueWithoutDeepEvidenceOnBuildFailure);
+    Result.OpenHtmlReportAfterGenerate := LIniFile.ReadBool(cSettingsSection, 'OpenHtmlReportAfterGenerate', Result.OpenHtmlReportAfterGenerate);
     Result.WarnWhenCompositionEvidenceIsEmpty := LIniFile.ReadBool(cSettingsSection, 'WarnWhenCompositionEvidenceIsEmpty', Result.WarnWhenCompositionEvidenceIsEmpty);
     Result.BuildScriptPath := Trim(LIniFile.ReadString(cSettingsSection, 'BuildScriptPath', Result.BuildScriptPath));
     Result.DelphiVersionOverride := LIniFile.ReadInteger(cSettingsSection, 'DelphiVersionOverride', Result.DelphiVersionOverride);
@@ -179,6 +209,7 @@ begin
     LIniFile.WriteBool(cSettingsSection, 'SaveAllModifiedFilesBeforeBuild', ASettings.SaveAllModifiedFilesBeforeBuild);
     LIniFile.WriteBool(cSettingsSection, 'UseActiveBuildConfiguration', ASettings.UseActiveBuildConfiguration);
     LIniFile.WriteBool(cSettingsSection, 'ContinueWithoutDeepEvidenceOnBuildFailure', ASettings.ContinueWithoutDeepEvidenceOnBuildFailure);
+    LIniFile.WriteBool(cSettingsSection, 'OpenHtmlReportAfterGenerate', ASettings.OpenHtmlReportAfterGenerate);
     LIniFile.WriteBool(cSettingsSection, 'WarnWhenCompositionEvidenceIsEmpty', ASettings.WarnWhenCompositionEvidenceIsEmpty);
     LIniFile.WriteString(cSettingsSection, 'BuildScriptPath', Trim(ASettings.BuildScriptPath));
     LIniFile.WriteInteger(cSettingsSection, 'DelphiVersionOverride', ASettings.DelphiVersionOverride);

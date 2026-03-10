@@ -1,14 +1,12 @@
 ﻿/// <summary>
 /// DX.Comply.IDE.Wizard
-/// Delphi IDE wizard that exposes SBOM generation via the Help menu and
-/// a dedicated Project menu entry.
+/// Delphi IDE wizard that exposes CRA compliance documentation generation
+/// through a dedicated Project menu entry.
 /// </summary>
 ///
 /// <remarks>
-/// TDxComplyWizard implements IOTAWizard + IOTAMenuWizard, which causes
-/// Delphi to add an entry to the Help menu automatically. A separate
-/// TMenuItem is also injected into the Project menu from the constructor
-/// so users find the action in the most logical location.
+/// TDxComplyWizard implements IOTAWizard and injects a dedicated submenu
+/// into the Project menu so users find the workflow in the most logical place.
 ///
 /// Registration follows the standard designtime package pattern:
 ///   initialization  - AddWizard
@@ -37,23 +35,29 @@ uses
   System.IOUtils,
   System.UITypes,
   Winapi.Windows,
+  Winapi.ShellAPI,
+  Vcl.Controls,
+  Vcl.ExtCtrls,
   Vcl.Menus,
   Vcl.Dialogs,
+  Vcl.Forms,
+  Vcl.Graphics,
+  Vcl.StdCtrls,
   ToolsAPI,
   DX.Comply.BuildOrchestrator,
   DX.Comply.Engine,
   DX.Comply.Engine.Intf,
   DX.Comply.IDE.Settings,
   DX.Comply.ProjectScanner,
-  DX.Comply.IDE.Logger;
+  DX.Comply.IDE.Logger,
+  DX.Comply.Report.Intf;
 
 type
   /// <summary>
   /// IDE wizard that adds SBOM generation to the Delphi IDE menus.
   /// </summary>
-  TDxComplyWizard = class(TInterfacedObject, IOTANotifier, IOTAWizard, IOTAMenuWizard)
+  TDxComplyWizard = class(TInterfacedObject, IOTANotifier, IOTAWizard)
   private
-    FDeepEvidenceMenuItem: TMenuItem;
     FOptionsPage: INTAAddInOptions;
     FProjectMenuItem: TMenuItem;
     FProjectMenuSeparator: TMenuItem;
@@ -80,13 +84,49 @@ type
     /// </summary>
     procedure OnProjectMenuItemClick(ASender: TObject);
     /// <summary>
-    /// Event handler for the explicit Deep-Evidence menu entry.
+    /// Opens the DX.Comply options page.
     /// </summary>
-    procedure OnDeepEvidenceMenuItemClick(ASender: TObject);
+    procedure OnOptionsMenuItemClick(ASender: TObject);
+    /// <summary>
+    /// Shows the About dialog.
+    /// </summary>
+    procedure OnAboutMenuItemClick(ASender: TObject);
+    /// <summary>
+    /// Opens the configured output in the default browser or shell handler.
+    /// </summary>
+    function OpenInDefaultBrowser(const ATarget: string): Boolean;
+    /// <summary>
+    /// Opens the registered Tools &gt; Options page for DX.Comply.
+    /// </summary>
+    procedure OpenOptionsPage;
+    /// <summary>
+    /// Resolves the base output path for companion reports next to the SBOM.
+    /// </summary>
+    function ResolveReportOutputBasePath(const ASbomOutputPath: string;
+      const AConfig: THumanReadableReportConfig): string;
+    /// <summary>
+    /// Resolves the concrete output file path for one report format.
+    /// </summary>
+    function ResolveReportOutputPath(const AOutputBasePath: string;
+      AFormat: THumanReadableReportFormat): string;
     /// <summary>
     /// Saves all modified editors before a Deep-Evidence build.
     /// </summary>
     procedure SaveModifiedFiles;
+    /// <summary>
+    /// Shows an informational About dialog with a GitHub link.
+    /// </summary>
+    procedure ShowAboutDialog;
+    /// <summary>
+    /// Shows the build confirmation dialog and returns True when the user confirms.
+    /// </summary>
+    function ShowBuildConfirmationDialog(const AProjectPath: string;
+      const APlan: TDeepEvidenceBuildPlan; out ADisablePrompt: Boolean): Boolean;
+    /// <summary>
+    /// Opens the generated HTML report when the current settings request it.
+    /// </summary>
+    procedure TryOpenHtmlReport(const ASbomOutputPath: string;
+      const ASettings: TDXComplyIDESettings; const AConfig: TSbomConfig);
     /// <summary>
     /// Prepares optional Deep-Evidence automation and adjusts the config if the user declines it.
     /// </summary>
@@ -116,9 +156,6 @@ type
     function GetName: string;
     function GetState: TWizardState;
     procedure Execute;
-
-    // IOTAMenuWizard
-    function GetMenuText: string;
   end;
 
 /// <summary>
@@ -131,7 +168,10 @@ procedure Register;
 implementation
 
 uses
-  DX.Comply.IDE.Options;
+  DX.Comply.IDE.AboutDialog,
+  DX.Comply.IDE.BuildConfirmationDialog,
+  DX.Comply.IDE.Options,
+  DX.Comply.IDE.OptionsFrame;
 
 var
   /// <summary>
@@ -140,12 +180,14 @@ var
   /// </summary>
   GWizardIndex: Integer = -1;
 
+const
+  cProjectMenuCaption = 'DX.Comply - CRA Compliance';
+
 { TDxComplyWizard }
 
 constructor TDxComplyWizard.Create;
 begin
   inherited Create;
-  FDeepEvidenceMenuItem := nil;
   FOptionsPage := nil;
   FProjectMenuItem := nil;
   FProjectMenuSeparator := nil;
@@ -164,8 +206,8 @@ procedure TDxComplyWizard.AddProjectMenuItems;
 var
   LNTASvc: INTAServices;
   LMainMenu: TMainMenu;
-  LMenuItem: TMenuItem;
   LProjectMenu: TMenuItem;
+  LSubMenuItem: TMenuItem;
   I: Integer;
 begin
   try
@@ -195,17 +237,25 @@ begin
     FProjectMenuSeparator.Caption := '-';
     LProjectMenu.Add(FProjectMenuSeparator);
 
-    LMenuItem := TMenuItem.Create(nil);
-    LMenuItem.Caption := 'Generate CRA compliance documentation (SBOM)...';
-    LMenuItem.OnClick := OnProjectMenuItemClick;
-    LProjectMenu.Add(LMenuItem);
-    FProjectMenuItem := LMenuItem;
+    FProjectMenuItem := TMenuItem.Create(nil);
+    FProjectMenuItem.Caption := cProjectMenuCaption;
 
-    LMenuItem := TMenuItem.Create(nil);
-    LMenuItem.Caption := 'Generate CRA compliance documentation (SBOM + Deep Evidence)...';
-    LMenuItem.OnClick := OnDeepEvidenceMenuItemClick;
-    LProjectMenu.Add(LMenuItem);
-    FDeepEvidenceMenuItem := LMenuItem;
+    LSubMenuItem := TMenuItem.Create(FProjectMenuItem);
+    LSubMenuItem.Caption := 'Generate documentation...';
+    LSubMenuItem.OnClick := OnProjectMenuItemClick;
+    FProjectMenuItem.Add(LSubMenuItem);
+
+    LSubMenuItem := TMenuItem.Create(FProjectMenuItem);
+    LSubMenuItem.Caption := 'Options';
+    LSubMenuItem.OnClick := OnOptionsMenuItemClick;
+    FProjectMenuItem.Add(LSubMenuItem);
+
+    LSubMenuItem := TMenuItem.Create(FProjectMenuItem);
+    LSubMenuItem.Caption := 'About DX.Comply';
+    LSubMenuItem.OnClick := OnAboutMenuItemClick;
+    FProjectMenuItem.Add(LSubMenuItem);
+
+    LProjectMenu.Add(FProjectMenuItem);
   except
     // Never crash the IDE during menu manipulation.
   end;
@@ -219,18 +269,10 @@ begin
   Result.Format := sfCycloneDxJson;
   Result.DeepEvidenceBuildScriptPath := ASettings.BuildScriptPath;
   Result.DeepEvidenceDelphiVersion := ASettings.DelphiVersionOverride;
-  Result.ContinueOnDeepEvidenceBuildFailure :=
-    ASettings.ContinueWithoutDeepEvidenceOnBuildFailure;
+  Result.ContinueOnDeepEvidenceBuildFailure := False;
   Result.WarnOnEmptyCompositionEvidence := ASettings.WarnWhenCompositionEvidenceIsEmpty;
   Result.HumanReadableReport := ASettings.HumanReadableReport;
-
-  case ASettings.AutoBuildMode of
-    abmWhenMapMissing: Result.DeepEvidenceMode := debWhenMapMissing;
-    abmAlways: Result.DeepEvidenceMode := debAlways;
-  else
-    Result.DeepEvidenceMode := debDisabled;
-  end;
-
+  Result.DeepEvidenceMode := debAlways;
   if AForceDeepEvidence then
     Result.DeepEvidenceMode := debAlways;
 
@@ -254,10 +296,7 @@ var
   LSuccess: Boolean;
 begin
   TIDELogger.Clear;
-  if AForceDeepEvidence then
-    TIDELogger.Info('DX.Comply: Starting SBOM generation with Deep-Evidence pre-build...')
-  else
-    TIDELogger.Info('DX.Comply: Starting SBOM generation...');
+  TIDELogger.Info('DX.Comply: Starting CRA compliance documentation generation...');
 
   try
     LProject := GetActiveProject;
@@ -294,7 +333,10 @@ begin
       LSuccess := LGenerator.Generate(LProjectPath, LOutputPath, sfCycloneDxJson);
 
       if LSuccess then
+      begin
+        TryOpenHtmlReport(LOutputPath, LSettings, LConfig);
         TIDELogger.Info('DX.Comply: SBOM generated successfully -> ' + LOutputPath)
+      end
       else
         TIDELogger.Error('DX.Comply: SBOM generation failed. Check messages above for details.');
     finally
@@ -308,17 +350,22 @@ end;
 
 procedure TDxComplyWizard.Execute;
 begin
-  ExecuteGeneration(False);
+  ExecuteGeneration(True);
 end;
 
-procedure TDxComplyWizard.OnDeepEvidenceMenuItemClick(ASender: TObject);
+procedure TDxComplyWizard.OnAboutMenuItemClick(ASender: TObject);
 begin
-  ExecuteGeneration(True);
+  ShowAboutDialog;
+end;
+
+procedure TDxComplyWizard.OnOptionsMenuItemClick(ASender: TObject);
+begin
+  OpenOptionsPage;
 end;
 
 procedure TDxComplyWizard.OnProjectMenuItemClick(ASender: TObject);
 begin
-  ExecuteGeneration(False);
+  ExecuteGeneration(True);
 end;
 
 procedure TDxComplyWizard.RegisterOptionsPage;
@@ -332,20 +379,21 @@ begin
   end;
 end;
 
+procedure TDxComplyWizard.OpenOptionsPage;
+var
+  LOTAServices: IOTAServices;
+begin
+  if Supports(BorlandIDEServices, IOTAServices, LOTAServices) then
+    LOTAServices.GetEnvironmentOptions.EditOptions('', DXComplyOptionsPageCaption)
+  else
+    TIDELogger.Warning('DX.Comply: RAD Studio did not expose the environment options service.');
+end;
+
 procedure TDxComplyWizard.RemoveProjectMenuItems;
 var
   LParent: TMenuItem;
 begin
   try
-    if Assigned(FDeepEvidenceMenuItem) then
-    begin
-      LParent := FDeepEvidenceMenuItem.Parent;
-      if Assigned(LParent) then
-        LParent.Remove(FDeepEvidenceMenuItem);
-      FDeepEvidenceMenuItem.Free;
-      FDeepEvidenceMenuItem := nil;
-    end;
-
     if Assigned(FProjectMenuItem) then
     begin
       LParent := FProjectMenuItem.Parent;
@@ -367,6 +415,38 @@ begin
   end;
 end;
 
+function TDxComplyWizard.OpenInDefaultBrowser(const ATarget: string): Boolean;
+begin
+  Result := NativeUInt(ShellExecute(0, 'open', PChar(ATarget), nil, nil, SW_SHOWNORMAL)) > 32;
+end;
+
+function TDxComplyWizard.ResolveReportOutputBasePath(const ASbomOutputPath: string;
+  const AConfig: THumanReadableReportConfig): string;
+begin
+  Result := Trim(AConfig.OutputBasePath);
+  if Result = '' then
+    Exit(TPath.Combine(TPath.GetDirectoryName(ASbomOutputPath),
+      TPath.GetFileNameWithoutExtension(ASbomOutputPath) + '.report'));
+
+  if TPath.IsRelativePath(Result) then
+    Result := TPath.Combine(TPath.GetDirectoryName(ASbomOutputPath), Result);
+
+  if Result.EndsWith('.md', True) or Result.EndsWith('.html', True) then
+    Result := TPath.ChangeExtension(Result, '');
+end;
+
+function TDxComplyWizard.ResolveReportOutputPath(const AOutputBasePath: string;
+  AFormat: THumanReadableReportFormat): string;
+begin
+  Result := AOutputBasePath;
+  case AFormat of
+    hrfMarkdown:
+      Result := Result + '.md';
+    hrfHtml:
+      Result := Result + '.html';
+  end;
+end;
+
 procedure TDxComplyWizard.SaveModifiedFiles;
 var
   LEditorServices: IOTAEditorServices;
@@ -382,16 +462,56 @@ begin
         LIterator.EditBuffers[I].Module.Save(False, False);
 end;
 
+procedure TDxComplyWizard.ShowAboutDialog;
+begin
+  ShowDXComplyAboutDialog;
+end;
+
+function TDxComplyWizard.ShowBuildConfirmationDialog(const AProjectPath: string;
+  const APlan: TDeepEvidenceBuildPlan; out ADisablePrompt: Boolean): Boolean;
+begin
+  Result := ShowDXComplyBuildConfirmationDialog(AProjectPath, APlan,
+    ADisablePrompt);
+end;
+
+procedure TDxComplyWizard.TryOpenHtmlReport(const ASbomOutputPath: string;
+  const ASettings: TDXComplyIDESettings; const AConfig: TSbomConfig);
+var
+  LHtmlReportPath: string;
+begin
+  if not ASettings.OpenHtmlReportAfterGenerate then
+    Exit;
+  if not AConfig.HumanReadableReport.Enabled then
+    Exit;
+  if not (AConfig.HumanReadableReport.Format in [hrfHtml, hrfBoth]) then
+    Exit;
+
+  LHtmlReportPath := ResolveReportOutputPath(
+    ResolveReportOutputBasePath(ASbomOutputPath, AConfig.HumanReadableReport),
+    hrfHtml);
+  if not TFile.Exists(LHtmlReportPath) then
+  begin
+    TIDELogger.Warning('DX.Comply: HTML report was not found after generation: ' + LHtmlReportPath);
+    Exit;
+  end;
+
+  if OpenInDefaultBrowser(LHtmlReportPath) then
+    TIDELogger.Info('DX.Comply: Opened HTML report in the default browser -> ' + LHtmlReportPath)
+  else
+    TIDELogger.Warning('DX.Comply: Failed to open the HTML report in the default browser: ' + LHtmlReportPath);
+end;
+
 function TDxComplyWizard.TryPrepareDeepEvidenceBuild(const AProjectPath: string;
   const ASettings: TDXComplyIDESettings; var AConfig: TSbomConfig;
   AForceDeepEvidence: Boolean): Boolean;
 var
+  LDisablePrompt: Boolean;
   LBuildOptions: TDeepEvidenceBuildOptions;
   LBuildOrchestrator: IBuildOrchestrator;
   LPlan: TDeepEvidenceBuildPlan;
   LProjectInfo: TProjectInfo;
   LProjectScanner: IProjectScanner;
-  LPromptMessage: string;
+  LUpdatedSettings: TDXComplyIDESettings;
 begin
   Result := True;
   if AConfig.DeepEvidenceMode = debDisabled then
@@ -420,24 +540,19 @@ begin
 
       if ASettings.PromptBeforeBuild then
       begin
-        LPromptMessage := 'DX.Comply can start a dedicated Deep-Evidence build before SBOM generation.' + sLineBreak + sLineBreak +
-          'Project: ' + ExtractFileName(AProjectPath) + sLineBreak +
-          'Configuration: ' + LPlan.Configuration + sLineBreak +
-          'Platform: ' + LPlan.Platform;
-
-        if MessageDlg(LPromptMessage, mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+        if not ShowBuildConfirmationDialog(AProjectPath, LPlan, LDisablePrompt) then
         begin
-          if AForceDeepEvidence then
-          begin
-            TIDELogger.Warning('DX.Comply: Deep-Evidence generation was cancelled by the user.');
-            Result := False;
-          end
-          else
-          begin
-            AConfig.DeepEvidenceMode := debDisabled;
-            TIDELogger.Warning('DX.Comply: Proceeding without the optional Deep-Evidence build.');
-          end;
+          TIDELogger.Warning('DX.Comply: CRA compliance generation was cancelled by the user.');
+          Result := False;
           Exit;
+        end;
+
+        if LDisablePrompt then
+        begin
+          LUpdatedSettings := ASettings;
+          LUpdatedSettings.PromptBeforeBuild := False;
+          TDXComplyIDESettingsStore.Save(LUpdatedSettings);
+          TIDELogger.Info('DX.Comply: The build confirmation dialog was disabled in IDE settings.');
         end;
       end;
 
@@ -451,7 +566,15 @@ begin
     end;
   except
     on E: Exception do
-      TIDELogger.Warning('DX.Comply: Deep-Evidence preflight failed. Continuing with configured defaults. ' + E.Message);
+    begin
+      if AForceDeepEvidence then
+      begin
+        TIDELogger.Error('DX.Comply: Deep-Evidence preflight failed. ' + E.Message);
+        Result := False;
+      end
+      else
+        TIDELogger.Warning('DX.Comply: Deep-Evidence preflight failed. ' + E.Message);
+    end;
   end;
 end;
 
@@ -480,19 +603,12 @@ end;
 
 function TDxComplyWizard.GetName: string;
 begin
-  Result := 'Generate SBOM (DX.Comply)';
+  Result := cProjectMenuCaption;
 end;
 
 function TDxComplyWizard.GetState: TWizardState;
 begin
   Result := [wsEnabled];
-end;
-
-// IOTAMenuWizard
-
-function TDxComplyWizard.GetMenuText: string;
-begin
-  Result := 'Generate CRA compliance documentation (SBOM)...';
 end;
 
 { Register }

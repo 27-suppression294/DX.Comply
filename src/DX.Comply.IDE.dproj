@@ -58,7 +58,7 @@
         <AppEnableHighDPI>true</AppEnableHighDPI>
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <DCC_UsePackage>rtl;vcl;designide;vclimg;vcljpg;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
-        <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
+        <Icon_MainIcon>$(MSBuildProjectDirectory)\..\assets\DX.Comply.ico</Icon_MainIcon>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply IDE Integration;FileVersion=1.0.0.0;InternalName=DX.Comply.IDE;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.IDE.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
     </PropertyGroup>
@@ -66,7 +66,7 @@
         <AppEnableHighDPI>true</AppEnableHighDPI>
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <DCC_UsePackage>rtl;vcl;designide;vclimg;vcljpg;xmlrtl;$(DCC_UsePackage)</DCC_UsePackage>
-        <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
+        <Icon_MainIcon>$(MSBuildProjectDirectory)\..\assets\DX.Comply.ico</Icon_MainIcon>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_Keys>CompanyName=Olaf Monien;FileDescription=DX.Comply IDE Integration;FileVersion=1.0.0.0;InternalName=DX.Comply.IDE;LegalCopyright=Copyright © 2026 Olaf Monien;LegalTrademarks=;OriginalFilename=DX.Comply.IDE.bpl;ProductName=DX.Comply;ProductVersion=1.0.0.0;Comments=MIT License</VerInfo_Keys>
     </PropertyGroup>
@@ -111,6 +111,7 @@
         <DCCReference Include="DX.Comply.Schema.Validator.pas"/>
         <DCCReference Include="DX.Comply.Engine.pas"/>
         <DCCReference Include="DX.Comply.IDE.Logger.pas"/>
+        <DCCReference Include="DX.Comply.IDE.AboutDialog.pas"/>
         <DCCReference Include="DX.Comply.IDE.Settings.pas"/>
         <DCCReference Include="DX.Comply.IDE.OptionsFrame.pas"/>
         <DCCReference Include="DX.Comply.IDE.Options.pas"/>

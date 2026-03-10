@@ -76,7 +76,7 @@ end;
 
 function TDXComplyIDEOptionsPage.GetCaption: string;
 begin
-  Result := 'DX.Comply';
+  Result := TFrameDXComplyOptions.OptionsPageCaption;
 end;
 
 function TDXComplyIDEOptionsPage.GetFrameClass: TCustomFrameClass;

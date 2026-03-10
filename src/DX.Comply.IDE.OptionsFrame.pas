@@ -4,8 +4,8 @@
 /// </summary>
 ///
 /// <remarks>
-/// The frame is created programmatically to keep the package lightweight and to avoid
-/// additional DFM management for the initial options surface.
+/// The frame uses a regular DFM-backed layout so RAD Studio can apply its normal
+/// DPI scaling behavior consistently inside the Tools &gt; Options host dialog.
 /// </remarks>
 ///
 /// <copyright>
@@ -30,28 +30,37 @@ type
   /// Options frame hosted inside the RAD Studio environment options dialog.
   /// </summary>
   TFrameDXComplyOptions = class(TFrame)
-  private
-    FAutoBuildModeComboBox: TComboBox;
-    FBuildScriptPathEdit: TEdit;
-    FBrowseScriptButton: TButton;
-    FContinueOnBuildFailureCheckBox: TCheckBox;
-    FDelphiVersionEdit: TEdit;
     FPromptBeforeBuildCheckBox: TCheckBox;
-    FReportEnabledCheckBox: TCheckBox;
-    FReportFormatComboBox: TComboBox;
-    FReportIncludeBuildEvidenceCheckBox: TCheckBox;
-    FReportIncludeCompositionCheckBox: TCheckBox;
-    FReportIncludeWarningsCheckBox: TCheckBox;
-    FReportOutputBasePathEdit: TEdit;
     FSaveAllModifiedFilesCheckBox: TCheckBox;
     FUseActiveBuildConfigurationCheckBox: TCheckBox;
+    FOpenHtmlReportAfterGenerateCheckBox: TCheckBox;
     FWarnWhenCompositionEmptyCheckBox: TCheckBox;
-    function AutoBuildModeFromSelection: TIDEAutoBuildMode;
-    procedure AddCheckBox(const ACaption: string; var ACheckBox: TCheckBox; var ATop: Integer);
+    BuildScriptPathLabel: TLabel;
+    FBuildScriptPathEdit: TEdit;
+    FBrowseScriptButton: TButton;
+    DelphiVersionLabel: TLabel;
+    FDelphiVersionEdit: TEdit;
+    FReportEnabledCheckBox: TCheckBox;
+    ReportFormatLabel: TLabel;
+    FReportFormatComboBox: TComboBox;
+    ReportOutputBasePathLabel: TLabel;
+    FReportOutputBasePathEdit: TEdit;
+    FReportIncludeWarningsCheckBox: TCheckBox;
+    FReportIncludeCompositionCheckBox: TCheckBox;
+    FReportIncludeBuildEvidenceCheckBox: TCheckBox;
+    FAboutButton: TButton;
+  private
+    procedure AboutButtonClick(Sender: TObject);
     procedure BrowseScriptButtonClick(Sender: TObject);
-    procedure CreateLabeledControl(const ACaption: string; const AControl: TControl;
-      var ATop: Integer; const AButton: TControl = nil);
   public
+    /// <summary>
+    /// Returns the caption used for the single DX.Comply node in the IDE options tree.
+    /// </summary>
+    class function OptionsPageCaption: string; static;
+    /// <summary>
+    /// Scales a design-time pixel value from 96 PPI to the requested target PPI.
+    /// </summary>
+    class function ScaleDesignValue(const AValue, APixelsPerInch: Integer): Integer; static;
     constructor Create(AOwner: TComponent); override;
     procedure LoadSettings(const ASettings: TDXComplyIDESettings);
     function SaveSettings: TDXComplyIDESettings;
@@ -63,92 +72,32 @@ implementation
 {$R *.dfm}
 
 uses
+  DX.Comply.IDE.AboutDialog,
   System.IOUtils,
   System.SysUtils,
   Vcl.Dialogs;
 
-const
-  cLeftMargin = 16;
-  cLabelWidth = 220;
-  cEditWidth = 360;
+class function TFrameDXComplyOptions.OptionsPageCaption: string;
+begin
+  Result := DXComplyOptionsPageCaption;
+end;
+
+class function TFrameDXComplyOptions.ScaleDesignValue(const AValue, APixelsPerInch: Integer): Integer;
+begin
+  Result := DXComplyScaleDesignValue(AValue, APixelsPerInch);
+end;
 
 constructor TFrameDXComplyOptions.Create(AOwner: TComponent);
-var
-  LTop: Integer;
 begin
   inherited Create(AOwner);
   Align := alClient;
-  AutoScroll := True;
-  Width := 660;
-  Height := 560;
-
-  LTop := 16;
-
-  FAutoBuildModeComboBox := TComboBox.Create(Self);
-  FAutoBuildModeComboBox.Parent := Self;
-  FAutoBuildModeComboBox.Style := csDropDownList;
-  FAutoBuildModeComboBox.Items.Add('Disabled');
-  FAutoBuildModeComboBox.Items.Add('Only when the expected MAP file is missing');
-  FAutoBuildModeComboBox.Items.Add('Always before SBOM generation');
-  CreateLabeledControl('Deep-Evidence auto-build', FAutoBuildModeComboBox, LTop);
-
-  AddCheckBox('Prompt before starting the Deep-Evidence build', FPromptBeforeBuildCheckBox, LTop);
-  AddCheckBox('Save all modified editors before the build', FSaveAllModifiedFilesCheckBox, LTop);
-  AddCheckBox('Use the active IDE configuration and platform', FUseActiveBuildConfigurationCheckBox, LTop);
-  AddCheckBox('Continue with artefact-only SBOM when the build fails', FContinueOnBuildFailureCheckBox, LTop);
-  AddCheckBox('Warn when no composition units were resolved', FWarnWhenCompositionEmptyCheckBox, LTop);
-
-  FBuildScriptPathEdit := TEdit.Create(Self);
-  FBuildScriptPathEdit.Parent := Self;
-  FBrowseScriptButton := TButton.Create(Self);
-  FBrowseScriptButton.Parent := Self;
-  FBrowseScriptButton.Caption := 'Browse...';
   FBrowseScriptButton.OnClick := BrowseScriptButtonClick;
-  CreateLabeledControl('Build script path override', FBuildScriptPathEdit, LTop, FBrowseScriptButton);
-
-  FDelphiVersionEdit := TEdit.Create(Self);
-  FDelphiVersionEdit.Parent := Self;
-  CreateLabeledControl('Delphi version override (0 = auto)', FDelphiVersionEdit, LTop);
-
-  AddCheckBox('Generate an additional human-readable report', FReportEnabledCheckBox, LTop);
-
-  FReportFormatComboBox := TComboBox.Create(Self);
-  FReportFormatComboBox.Parent := Self;
-  FReportFormatComboBox.Style := csDropDownList;
-  FReportFormatComboBox.Items.Add('Markdown');
-  FReportFormatComboBox.Items.Add('HTML');
-  FReportFormatComboBox.Items.Add('Markdown + HTML');
-  CreateLabeledControl('Human-readable report format', FReportFormatComboBox, LTop);
-
-  FReportOutputBasePathEdit := TEdit.Create(Self);
-  FReportOutputBasePathEdit.Parent := Self;
-  CreateLabeledControl('Report output base path (optional)', FReportOutputBasePathEdit, LTop);
-
-  AddCheckBox('Include warnings in the human-readable report', FReportIncludeWarningsCheckBox, LTop);
-  AddCheckBox('Include composition evidence in the human-readable report', FReportIncludeCompositionCheckBox, LTop);
-  AddCheckBox('Include build evidence in the human-readable report', FReportIncludeBuildEvidenceCheckBox, LTop);
+  FAboutButton.OnClick := AboutButtonClick;
 end;
 
-procedure TFrameDXComplyOptions.AddCheckBox(const ACaption: string;
-  var ACheckBox: TCheckBox; var ATop: Integer);
+procedure TFrameDXComplyOptions.AboutButtonClick(Sender: TObject);
 begin
-  ACheckBox := TCheckBox.Create(Self);
-  ACheckBox.Parent := Self;
-  ACheckBox.Left := cLeftMargin;
-  ACheckBox.Top := ATop;
-  ACheckBox.Width := 520;
-  ACheckBox.Caption := ACaption;
-  Inc(ATop, 28);
-end;
-
-function TFrameDXComplyOptions.AutoBuildModeFromSelection: TIDEAutoBuildMode;
-begin
-  case FAutoBuildModeComboBox.ItemIndex of
-    1: Result := abmWhenMapMissing;
-    2: Result := abmAlways;
-  else
-    Result := abmDisabled;
-  end;
+  ShowDXComplyAboutDialog;
 end;
 
 procedure TFrameDXComplyOptions.BrowseScriptButtonClick(Sender: TObject);
@@ -166,45 +115,12 @@ begin
   end;
 end;
 
-procedure TFrameDXComplyOptions.CreateLabeledControl(const ACaption: string;
-  const AControl: TControl; var ATop: Integer; const AButton: TControl);
-var
-  LLabel: TLabel;
-begin
-  LLabel := TLabel.Create(Self);
-  LLabel.Parent := Self;
-  LLabel.Left := cLeftMargin;
-  LLabel.Top := ATop + 4;
-  LLabel.Width := cLabelWidth;
-  LLabel.Caption := ACaption;
-
-  AControl.Left := cLeftMargin + cLabelWidth + 12;
-  AControl.Top := ATop;
-  AControl.Width := cEditWidth;
-
-  if Assigned(AButton) then
-  begin
-    AButton.Left := AControl.Left + AControl.Width + 8;
-    AButton.Top := ATop - 1;
-    AButton.Width := 88;
-  end;
-
-  Inc(ATop, 34);
-end;
-
 procedure TFrameDXComplyOptions.LoadSettings(const ASettings: TDXComplyIDESettings);
 begin
-  case ASettings.AutoBuildMode of
-    abmWhenMapMissing: FAutoBuildModeComboBox.ItemIndex := 1;
-    abmAlways: FAutoBuildModeComboBox.ItemIndex := 2;
-  else
-    FAutoBuildModeComboBox.ItemIndex := 0;
-  end;
-
   FPromptBeforeBuildCheckBox.Checked := ASettings.PromptBeforeBuild;
   FSaveAllModifiedFilesCheckBox.Checked := ASettings.SaveAllModifiedFilesBeforeBuild;
   FUseActiveBuildConfigurationCheckBox.Checked := ASettings.UseActiveBuildConfiguration;
-  FContinueOnBuildFailureCheckBox.Checked := ASettings.ContinueWithoutDeepEvidenceOnBuildFailure;
+  FOpenHtmlReportAfterGenerateCheckBox.Checked := ASettings.OpenHtmlReportAfterGenerate;
   FWarnWhenCompositionEmptyCheckBox.Checked := ASettings.WarnWhenCompositionEvidenceIsEmpty;
   FBuildScriptPathEdit.Text := ASettings.BuildScriptPath;
   FDelphiVersionEdit.Text := IntToStr(ASettings.DelphiVersionOverride);
@@ -224,11 +140,12 @@ end;
 function TFrameDXComplyOptions.SaveSettings: TDXComplyIDESettings;
 begin
   Result := TDXComplyIDESettings.Default;
-  Result.AutoBuildMode := AutoBuildModeFromSelection;
+  Result.AutoBuildMode := abmAlways;
   Result.PromptBeforeBuild := FPromptBeforeBuildCheckBox.Checked;
   Result.SaveAllModifiedFilesBeforeBuild := FSaveAllModifiedFilesCheckBox.Checked;
   Result.UseActiveBuildConfiguration := FUseActiveBuildConfigurationCheckBox.Checked;
-  Result.ContinueWithoutDeepEvidenceOnBuildFailure := FContinueOnBuildFailureCheckBox.Checked;
+  Result.ContinueWithoutDeepEvidenceOnBuildFailure := False;
+  Result.OpenHtmlReportAfterGenerate := FOpenHtmlReportAfterGenerateCheckBox.Checked;
   Result.WarnWhenCompositionEvidenceIsEmpty := FWarnWhenCompositionEmptyCheckBox.Checked;
   Result.BuildScriptPath := Trim(FBuildScriptPathEdit.Text);
   Result.DelphiVersionOverride := StrToIntDef(Trim(FDelphiVersionEdit.Text), -1);

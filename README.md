@@ -9,16 +9,16 @@
 ## TL;DR
 
 The EU Cyber Resilience Act (CRA) — in force since December 2024 — requires software vendors to document what is inside their products. Full compliance is mandatory by December 2027.
-DX.Comply generates that document — a *Software Bill of Materials* — directly from your RAD Studio project in one click, in a format that satisfies the legal requirement.
+DX.Comply generates that document — a *Software Bill of Materials* — directly from your RAD Studio project in one click, together with optional human-readable Markdown and HTML reports for audit and review workflows.
 
 **You generate it. You archive it. You never have to submit it anywhere.**
 
 Current implementation status:
-- release SBOM generation is available
-- build-evidence foundations are in place
-- MAP-first Deep-Evidence seeding is implemented
-- explicit Deep-Evidence build orchestration is implemented
-- representation refinement, origin classification, and evidence sidecar output are still in progress
+- CycloneDX JSON and XML SBOM generation are available
+- human-readable Markdown and HTML companion reports are available
+- MAP-first Deep-Evidence seeding and explicit Deep-Evidence build orchestration are implemented
+- build evidence, hierarchical unit resolution, and origin classification are implemented
+- separate evidence sidecar output is not shipped because the formal evidence is embedded in the SBOM/report output
 
 See `docs/CurrentStatus.md` for the detailed technical handover state.
 
@@ -189,10 +189,10 @@ as a primary membership source for the units actually linked into the result.
 | Cryptographic fingerprints  | SHA-256 hash for every file                  |
 | Dependency graph            | Basic component relationships                |
 
-Important limitation: the current engine already seeds unit membership from MAP
-evidence, but representation refinement (`.pas` / `.dcu` / `.dcp` / `.bpl`),
-origin classification, and separate evidence sidecar output are still being
-implemented.
+Important limitation: the current engine already resolves unit membership and
+origin classification from project metadata, build evidence, and MAP data, but
+the accuracy of the result still depends on the quality of the available Delphi
+build artefacts and search-path information.
 
 ---
 
