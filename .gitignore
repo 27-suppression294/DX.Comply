@@ -104,11 +104,11 @@ GRTAGS
 GTAGS
 
 # =========================
-# SBOM output (keep example)
+# SBOM generated output
 # =========================
-# bom.json
-# bom.xml
-"*.diag.log"  
-"*.f*.dproj"  
-"msbuild-preprocess.log" 
-src/bom.json
+**/bom.json
+**/bom.report.html
+**/bom.report.md
+"*.diag.log"
+"*.f*.dproj"
+"msbuild-preprocess.log"
