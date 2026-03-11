@@ -176,7 +176,8 @@ uses
   DX.Comply.IDE.BuildConfirmationDialog,
   DX.Comply.IDE.Options,
   DX.Comply.IDE.OptionsFrame,
-  DX.Comply.IDE.PathSupport;
+  DX.Comply.IDE.PathSupport,
+  DX.Comply.IDE.ProgressDialog;
 
 var
   /// <summary>
@@ -330,7 +331,6 @@ end;
 procedure TDxComplyWizard.ExecuteGeneration(AForceDeepEvidence: Boolean);
 var
   LConfig: TSbomConfig;
-  LGenerator: TDxComplyGenerator;
   LOutputPath: string;
   LProject: IOTAProject;
   LProjectPath: string;
@@ -364,26 +364,15 @@ begin
     TIDELogger.Info('DX.Comply: Project : ' + LProjectPath);
     TIDELogger.Info('DX.Comply: Output  : ' + LOutputPath);
 
-    LGenerator := TDxComplyGenerator.Create(LConfig);
-    try
-      LGenerator.OnProgress :=
-        procedure(const AMessage: string; const AProgress: Integer)
-        begin
-          TIDELogger.Progress(AMessage, AProgress);
-        end;
+    LSuccess := ShowDXComplyProgressDialog(LProjectPath, LOutputPath, sfCycloneDxJson, LConfig);
 
-      LSuccess := LGenerator.Generate(LProjectPath, LOutputPath, sfCycloneDxJson);
-
-      if LSuccess then
-      begin
-        TryOpenHtmlReport(LOutputPath, LSettings, LConfig);
-        TIDELogger.Info('DX.Comply: SBOM generated successfully -> ' + LOutputPath)
-      end
-      else
-        TIDELogger.Error('DX.Comply: SBOM generation failed. Check messages above for details.');
-    finally
-      LGenerator.Free;
-    end;
+    if LSuccess then
+    begin
+      TryOpenHtmlReport(LOutputPath, LSettings, LConfig);
+      TIDELogger.Info('DX.Comply: SBOM generated successfully -> ' + LOutputPath);
+    end
+    else
+      TIDELogger.Warning('DX.Comply: SBOM generation failed or was cancelled.');
   except
     on E: Exception do
       TIDELogger.Error('DX.Comply: Unhandled exception: ' + E.ClassName + ': ' + E.Message);

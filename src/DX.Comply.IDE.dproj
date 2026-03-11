@@ -117,6 +117,7 @@
         <DCCReference Include="DX.Comply.IDE.PathSupport.pas"/>
         <DCCReference Include="DX.Comply.IDE.ReadmeSupport.pas"/>
         <DCCReference Include="DX.Comply.IDE.BuildConfirmationDialog.pas"/>
+        <DCCReference Include="DX.Comply.IDE.ProgressDialog.pas"/>
         <DCCReference Include="DX.Comply.IDE.Settings.pas"/>
         <DCCReference Include="DX.Comply.IDE.OptionsFrame.pas"/>
         <DCCReference Include="DX.Comply.IDE.Options.pas"/>
