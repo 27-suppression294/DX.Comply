@@ -119,7 +119,7 @@ See [docs/CI-Integration.md](docs/CI-Integration.md) for GitHub Actions examples
 | **HTML Report** | — | Human-readable compliance report with unit evidence, artefacts, validation |
 | **Markdown Report** | — | Lightweight companion for code review and archival |
 
-All generated SBOMs are validated against the official schema before being written to disk.
+All generated SBOMs are validated against the official schema before being written to disk. CycloneDX JSON output passes [`check-jsonschema`](https://github.com/python-jsonschema/check-jsonschema) validation against the [official CycloneDX 1.5 JSON schema](http://cyclonedx.org/schema/bom-1.5.schema.json).
 
 ---
 
