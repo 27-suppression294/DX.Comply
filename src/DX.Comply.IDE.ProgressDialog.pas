@@ -222,118 +222,142 @@ end;
 
 procedure TFormDXComplyProgressDialog.BuildUI;
 
-  /// <summary>
-  /// Scales a 96-DPI design-time pixel value to the current monitor PPI.
-  /// </summary>
   function S(AValue: Integer): Integer;
   begin
-    Result := MulDiv(AValue, Self.CurrentPPI, 96);
+    Result := MulDiv(AValue, Screen.PixelsPerInch, 96);
   end;
 
 var
   LSepBelowProgress: TPanel;
   LFooterSep: TPanel;
   LLogWrapper: TPanel;
-  LScaledWidth: Integer;
-  LScaledMargin: Integer;
-  LBarWidth: Integer;
-  LPercentWidth: Integer;
-  LButtonWidth: Integer;
-  LButtonHeight: Integer;
+  LProgressContent: TPanel;
+  LPercentPanel: TPanel;
+  LM: Integer;
 begin
-  // Pre-calculate frequently used scaled values
-  LScaledWidth := S(640);
-  LScaledMargin := S(16);
-  LPercentWidth := S(44);
-  LButtonWidth := S(88);
-  LButtonHeight := S(30);
-  LBarWidth := LScaledWidth - LScaledMargin * 2 - LPercentWidth - S(8);
+  LM := S(20);
 
   Caption := 'DX.Comply - CRA Documentation Generator';
-  ClientWidth := LScaledWidth;
-  ClientHeight := S(480);
+  ClientWidth := S(780);
+  ClientHeight := S(560);
   BorderStyle := bsDialog;
   Position := poScreenCenter;
   Color := clWhite;
   Font.Name := 'Segoe UI';
-  Font.Size := 9;
+  Font.Size := 10;
 
   // === Dark branded header ===
   FPanelHeader := TPanel.Create(Self);
   FPanelHeader.Parent := Self;
   FPanelHeader.Align := alTop;
-  FPanelHeader.Height := S(60);
+  FPanelHeader.Height := S(80);
   FPanelHeader.BevelOuter := bvNone;
   FPanelHeader.Color := cColorHeader;
   FPanelHeader.ParentBackground := False;
+  FPanelHeader.Padding.Left := LM;
+  FPanelHeader.Padding.Right := LM;
 
   FLabelTitle := TLabel.Create(FPanelHeader);
   FLabelTitle.Parent := FPanelHeader;
+  FLabelTitle.Align := alTop;
   FLabelTitle.Caption := 'DX.Comply';
   FLabelTitle.Font.Name := 'Segoe UI Semibold';
-  FLabelTitle.Font.Size := 14;
+  FLabelTitle.Font.Size := 18;
   FLabelTitle.Font.Style := [fsBold];
   FLabelTitle.Font.Color := cColorTitle;
   FLabelTitle.ParentFont := False;
-  FLabelTitle.Left := LScaledMargin;
-  FLabelTitle.Top := S(8);
-  FLabelTitle.AutoSize := True;
+  FLabelTitle.Layout := tlCenter;
+  FLabelTitle.AlignWithMargins := True;
+  FLabelTitle.Margins.Top := S(10);
+  FLabelTitle.Margins.Bottom := 0;
+  FLabelTitle.Margins.Left := 0;
+  FLabelTitle.Margins.Right := 0;
 
   FLabelSubtitle := TLabel.Create(FPanelHeader);
   FLabelSubtitle.Parent := FPanelHeader;
+  FLabelSubtitle.Align := alTop;
   FLabelSubtitle.Caption := 'Generating CRA compliance documentation';
   FLabelSubtitle.Font.Name := 'Segoe UI';
-  FLabelSubtitle.Font.Size := 9;
+  FLabelSubtitle.Font.Size := 10;
   FLabelSubtitle.Font.Color := cColorSubtitle;
   FLabelSubtitle.ParentFont := False;
-  FLabelSubtitle.Left := LScaledMargin;
-  FLabelSubtitle.Top := S(36);
-  FLabelSubtitle.AutoSize := True;
+  FLabelSubtitle.AlignWithMargins := True;
+  FLabelSubtitle.Margins.Top := S(4);
+  FLabelSubtitle.Margins.Bottom := 0;
+  FLabelSubtitle.Margins.Left := 0;
+  FLabelSubtitle.Margins.Right := 0;
 
-  // === Progress section ===
+  // === Progress section (Align-based layout) ===
   FPanelProgress := TPanel.Create(Self);
   FPanelProgress.Parent := Self;
   FPanelProgress.Align := alTop;
-  FPanelProgress.Height := S(64);
+  FPanelProgress.Height := S(80);
   FPanelProgress.BevelOuter := bvNone;
   FPanelProgress.Color := clWhite;
   FPanelProgress.ParentBackground := False;
+  FPanelProgress.Padding.Left := LM;
+  FPanelProgress.Padding.Right := LM;
+  FPanelProgress.Padding.Top := S(12);
+  FPanelProgress.Padding.Bottom := S(12);
 
   FLabelStep := TLabel.Create(FPanelProgress);
   FLabelStep.Parent := FPanelProgress;
+  FLabelStep.Align := alTop;
   FLabelStep.Caption := 'Initializing...';
   FLabelStep.Font.Name := 'Segoe UI';
-  FLabelStep.Font.Size := 9;
+  FLabelStep.Font.Size := 10;
   FLabelStep.Font.Color := cColorNeutral;
   FLabelStep.ParentFont := False;
-  FLabelStep.Left := LScaledMargin;
-  FLabelStep.Top := S(8);
-  FLabelStep.Width := LBarWidth;
   FLabelStep.AutoSize := False;
+  FLabelStep.Height := S(20);
   FLabelStep.EllipsisPosition := epEndEllipsis;
+  FLabelStep.AlignWithMargins := True;
+  FLabelStep.Margins.Bottom := S(8);
+  FLabelStep.Margins.Top := 0;
+  FLabelStep.Margins.Left := 0;
+  FLabelStep.Margins.Right := 0;
 
-  FProgressBar := TProgressBar.Create(FPanelProgress);
-  FProgressBar.Parent := FPanelProgress;
-  FProgressBar.Left := LScaledMargin;
-  FProgressBar.Top := S(32);
-  FProgressBar.Width := LBarWidth;
-  FProgressBar.Height := S(18);
+  // Container for progress bar row
+  LProgressContent := TPanel.Create(FPanelProgress);
+  LProgressContent.Parent := FPanelProgress;
+  LProgressContent.Align := alTop;
+  LProgressContent.Height := S(22);
+  LProgressContent.BevelOuter := bvNone;
+  LProgressContent.Color := clWhite;
+  LProgressContent.ParentBackground := False;
+
+  // Percent label on the right side of the bar row
+  LPercentPanel := TPanel.Create(LProgressContent);
+  LPercentPanel.Parent := LProgressContent;
+  LPercentPanel.Align := alRight;
+  LPercentPanel.Width := S(50);
+  LPercentPanel.BevelOuter := bvNone;
+  LPercentPanel.Color := clWhite;
+  LPercentPanel.ParentBackground := False;
+
+  FLabelPercent := TLabel.Create(LPercentPanel);
+  FLabelPercent.Parent := LPercentPanel;
+  FLabelPercent.Align := alClient;
+  FLabelPercent.Caption := '0%';
+  FLabelPercent.Font.Name := 'Segoe UI';
+  FLabelPercent.Font.Size := 10;
+  FLabelPercent.Font.Color := cColorNeutral;
+  FLabelPercent.ParentFont := False;
+  FLabelPercent.Alignment := taRightJustify;
+  FLabelPercent.Layout := tlCenter;
+
+  FProgressBar := TProgressBar.Create(LProgressContent);
+  FProgressBar.Parent := LProgressContent;
+  FProgressBar.Align := alClient;
+  FProgressBar.AlignWithMargins := True;
+  FProgressBar.Margins.Right := S(12);
+  FProgressBar.Margins.Top := 0;
+  FProgressBar.Margins.Bottom := 0;
+  FProgressBar.Margins.Left := 0;
   FProgressBar.Min := 0;
   FProgressBar.Max := 100;
   FProgressBar.Position := 0;
   FProgressBar.Smooth := True;
-
-  FLabelPercent := TLabel.Create(FPanelProgress);
-  FLabelPercent.Parent := FPanelProgress;
-  FLabelPercent.Caption := '0%';
-  FLabelPercent.Font.Name := 'Segoe UI';
-  FLabelPercent.Font.Size := 9;
-  FLabelPercent.Font.Color := cColorNeutral;
-  FLabelPercent.ParentFont := False;
-  FLabelPercent.Alignment := taRightJustify;
-  FLabelPercent.Left := FProgressBar.Left + FProgressBar.Width + S(8);
-  FLabelPercent.Top := S(34);
-  FLabelPercent.Width := LPercentWidth;
 
   // Thin separator between progress and log
   LSepBelowProgress := TPanel.Create(Self);
@@ -347,10 +371,12 @@ begin
   FPanelFooter := TPanel.Create(Self);
   FPanelFooter.Parent := Self;
   FPanelFooter.Align := alBottom;
-  FPanelFooter.Height := S(48);
+  FPanelFooter.Height := S(52);
   FPanelFooter.BevelOuter := bvNone;
   FPanelFooter.Color := clWhite;
   FPanelFooter.ParentBackground := False;
+  FPanelFooter.Padding.Left := LM;
+  FPanelFooter.Padding.Right := LM;
 
   LFooterSep := TPanel.Create(FPanelFooter);
   LFooterSep.Parent := FPanelFooter;
@@ -359,26 +385,33 @@ begin
   LFooterSep.BevelOuter := bvNone;
   LFooterSep.Color := cColorSep;
 
-  FLabelStatus := TLabel.Create(FPanelFooter);
-  FLabelStatus.Parent := FPanelFooter;
-  FLabelStatus.Caption := 'In progress...';
-  FLabelStatus.Font.Name := 'Segoe UI';
-  FLabelStatus.Font.Size := 9;
-  FLabelStatus.Font.Color := cColorNeutral;
-  FLabelStatus.ParentFont := False;
-  FLabelStatus.Left := LScaledMargin;
-  FLabelStatus.Top := S(14);
-  FLabelStatus.AutoSize := True;
-
   FButtonAction := TButton.Create(FPanelFooter);
   FButtonAction.Parent := FPanelFooter;
+  FButtonAction.Align := alRight;
+  FButtonAction.AlignWithMargins := True;
+  FButtonAction.Width := S(100);
+  FButtonAction.Margins.Top := S(10);
+  FButtonAction.Margins.Bottom := S(10);
+  FButtonAction.Margins.Left := S(12);
+  FButtonAction.Margins.Right := 0;
   FButtonAction.Caption := 'Abort';
-  FButtonAction.Width := LButtonWidth;
-  FButtonAction.Height := LButtonHeight;
-  FButtonAction.Left := LScaledWidth - LButtonWidth - LScaledMargin;
-  FButtonAction.Top := S(9);
   FButtonAction.Cancel := True;
   FButtonAction.OnClick := OnActionClick;
+
+  FLabelStatus := TLabel.Create(FPanelFooter);
+  FLabelStatus.Parent := FPanelFooter;
+  FLabelStatus.Align := alClient;
+  FLabelStatus.Caption := 'In progress...';
+  FLabelStatus.Font.Name := 'Segoe UI';
+  FLabelStatus.Font.Size := 10;
+  FLabelStatus.Font.Color := cColorNeutral;
+  FLabelStatus.ParentFont := False;
+  FLabelStatus.Layout := tlCenter;
+  FLabelStatus.AlignWithMargins := True;
+  FLabelStatus.Margins.Top := S(10);
+  FLabelStatus.Margins.Bottom := S(10);
+  FLabelStatus.Margins.Left := 0;
+  FLabelStatus.Margins.Right := 0;
 
   // === Scrollable log (fills remaining space) ===
   LLogWrapper := TPanel.Create(Self);
@@ -386,10 +419,10 @@ begin
   LLogWrapper.Align := alClient;
   LLogWrapper.BevelOuter := bvNone;
   LLogWrapper.Color := clWhite;
-  LLogWrapper.Padding.Left := LScaledMargin;
-  LLogWrapper.Padding.Right := LScaledMargin;
-  LLogWrapper.Padding.Top := S(4);
-  LLogWrapper.Padding.Bottom := S(4);
+  LLogWrapper.Padding.Left := LM;
+  LLogWrapper.Padding.Right := LM;
+  LLogWrapper.Padding.Top := S(8);
+  LLogWrapper.Padding.Bottom := S(8);
 
   FMemoLog := TMemo.Create(LLogWrapper);
   FMemoLog.Parent := LLogWrapper;
@@ -398,7 +431,7 @@ begin
   FMemoLog.ScrollBars := ssVertical;
   FMemoLog.WordWrap := False;
   FMemoLog.Font.Name := 'Consolas';
-  FMemoLog.Font.Size := 9;
+  FMemoLog.Font.Size := 10;
   FMemoLog.Color := $F5F5F5;
   FMemoLog.BorderStyle := bsSingle;
   FMemoLog.Lines.Clear;
