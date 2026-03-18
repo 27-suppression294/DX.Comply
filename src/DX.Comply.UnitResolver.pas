@@ -30,6 +30,7 @@ type
   /// </summary>
   TUnitResolver = class(TInterfacedObject, IUnitResolver)
   private
+    FHashService: IHashService;
     FRecursiveSearchCache: TDictionary<string, string>;
     /// <summary>
     /// Copies unique warning entries from the source list into the target list.
@@ -67,6 +68,11 @@ type
       const ACandidateFileNames: TArray<string>; out AResolvedPath: string;
       out AUsedFallbackName: Boolean): Boolean;
     /// <summary>
+    /// Infers the origin kind from the unit name namespace when no file can be resolved.
+    /// </summary>
+    function InferOriginFromUnitName(const AProjectInfo: TProjectInfo;
+      const AUnitName: string): TUnitOriginKind;
+    /// <summary>
     /// Returns True when APath is located below ABaseDirectory.
     /// </summary>
     function IsPathUnderDirectory(const APath, ABaseDirectory: string): Boolean;
@@ -75,8 +81,13 @@ type
     /// </summary>
     function ResolveMapDerivedUnit(const AProjectInfo: TProjectInfo;
       const ABuildEvidence: TBuildEvidence; const AUnitName, AMapFilePath: string): TResolvedUnitInfo;
+    /// <summary>
+    /// Computes SHA-256 and SHA-512 hashes for the resolved file path.
+    /// </summary>
+    procedure ComputeHashes(var AResolvedUnit: TResolvedUnitInfo);
   public
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(const AHashService: IHashService); overload;
     destructor Destroy; override;
     /// <summary>
     /// Resolves the first-pass composition evidence envelope.
@@ -97,6 +108,23 @@ constructor TUnitResolver.Create;
 begin
   inherited Create;
   FRecursiveSearchCache := TDictionary<string, string>.Create;
+end;
+
+constructor TUnitResolver.Create(const AHashService: IHashService);
+begin
+  Create;
+  FHashService := AHashService;
+end;
+
+procedure TUnitResolver.ComputeHashes(var AResolvedUnit: TResolvedUnitInfo);
+begin
+  if not Assigned(FHashService) then
+    Exit;
+  if (AResolvedUnit.ResolvedPath = '') or not TFile.Exists(AResolvedUnit.ResolvedPath) then
+    Exit;
+
+  AResolvedUnit.SecondaryHashSha256 := FHashService.ComputeSha256(AResolvedUnit.ResolvedPath);
+  AResolvedUnit.PrimaryHashSha512 := FHashService.ComputeSha512(AResolvedUnit.ResolvedPath);
 end;
 
 destructor TUnitResolver.Destroy;
@@ -265,6 +293,32 @@ begin
   end;
 end;
 
+function TUnitResolver.InferOriginFromUnitName(const AProjectInfo: TProjectInfo;
+  const AUnitName: string): TUnitOriginKind;
+begin
+  if StartsText('Vcl.', AUnitName) or SameText(AUnitName, 'Vcl') then
+    Exit(uokEmbarcaderoVcl);
+  if StartsText('Fmx.', AUnitName) or SameText(AUnitName, 'Fmx') or StartsText('FMX.', AUnitName) then
+    Exit(uokEmbarcaderoFmx);
+  if StartsText('System.', AUnitName) or SameText(AUnitName, 'System') or
+     SameText(AUnitName, 'SysInit') or
+     StartsText('Winapi.', AUnitName) or
+     StartsText('Posix.', AUnitName) or
+     StartsText('Macapi.', AUnitName) or
+     StartsText('iOSapi.', AUnitName) or
+     StartsText('Androidapi.', AUnitName) or
+     StartsText('Data.', AUnitName) or
+     StartsText('Datasnap.', AUnitName) or
+     StartsText('Xml.', AUnitName) or
+     StartsText('Web.', AUnitName) or
+     StartsText('Soap.', AUnitName) or
+     StartsText('REST.', AUnitName) or
+     StartsText('Net.', AUnitName) then
+    Exit(uokEmbarcaderoRtl);
+
+  Result := uokLocalProject;
+end;
+
 function TUnitResolver.IsPathUnderDirectory(const APath, ABaseDirectory: string): Boolean;
 var
   LNormalizedBase: string;
@@ -287,6 +341,7 @@ var
   LEvidenceItem: TBuildEvidenceItem;
   LExistingResolvedUnit: TResolvedUnitInfo;
   LIsDuplicate: Boolean;
+  LResolvedUnit: TResolvedUnitInfo;
 begin
   for LEvidenceItem in ABuildEvidence.EvidenceItems do
   begin
@@ -306,8 +361,10 @@ begin
     if LIsDuplicate then
       Continue;
 
-    ACompositionEvidence.Units.Add(ResolveMapDerivedUnit(AProjectInfo,
-      ABuildEvidence, LEvidenceItem.UnitName, LEvidenceItem.FilePath));
+    LResolvedUnit := ResolveMapDerivedUnit(AProjectInfo,
+      ABuildEvidence, LEvidenceItem.UnitName, LEvidenceItem.FilePath);
+    ComputeHashes(LResolvedUnit);
+    ACompositionEvidence.Units.Add(LResolvedUnit);
   end;
 end;
 
@@ -392,6 +449,9 @@ begin
     LDirectSearchPaths.Free;
   end;
 
+  Result.EvidenceKind := uekMap;
+  Result.OriginKind := InferOriginFromUnitName(AProjectInfo, AUnitName);
+  Result.Confidence := rcHeuristic;
   SetLength(Result.Warnings, 1);
   Result.Warnings[0] := 'Could not resolve the unit beyond MAP-file membership.';
 end;

@@ -47,33 +47,34 @@ type
   /// Describes the representation actually used for a resolved unit.
   /// </summary>
   TUnitEvidenceKind = (
+    uekUnknown,
     uekPas,
     uekDcu,
     uekDcp,
     uekBpl,
-    uekUnknown
+    uekMap
   );
 
   /// <summary>
   /// Groups a resolved unit by provenance.
   /// </summary>
   TUnitOriginKind = (
+    uokUnknown,
     uokEmbarcaderoRtl,
     uokEmbarcaderoVcl,
     uokEmbarcaderoFmx,
     uokLocalProject,
-    uokThirdParty,
-    uokUnknown
+    uokThirdParty
   );
 
   /// <summary>
   /// Expresses how certain the resolver is about a unit result.
   /// </summary>
   TResolutionConfidence = (
+    rcUnknown,
     rcAuthoritative,
     rcStrong,
-    rcHeuristic,
-    rcUnknown
+    rcHeuristic
   );
 
   /// <summary>
