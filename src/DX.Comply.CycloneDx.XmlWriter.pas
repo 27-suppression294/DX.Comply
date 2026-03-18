@@ -81,7 +81,7 @@ var
   LGuid: TGUID;
 begin
   CreateGUID(LGuid);
-  Result := GUIDToString(LGuid);
+  Result := LowerCase(GUIDToString(LGuid));
   Result := Result.Substring(1, Result.Length - 2);
 end;
 

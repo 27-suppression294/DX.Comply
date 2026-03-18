@@ -70,7 +70,7 @@ var
   LGuid: TGUID;
 begin
   CreateGUID(LGuid);
-  Result := GUIDToString(LGuid);
+  Result := LowerCase(GUIDToString(LGuid));
   // Remove braces for CycloneDX format
   Result := Result.Substring(1, Result.Length - 2);
 end;
@@ -142,9 +142,10 @@ begin
   if Length(AMetadata.Properties) > 0 then
     LMetadata.AddPair('properties', BuildProperties(AMetadata.Properties));
 
-  // Tool information
+  // Tool information (CycloneDX 1.5 tools.components format)
   LTool := TJSONObject.Create;
-  LTool.AddPair('vendor', 'Olaf Monien');
+  LTool.AddPair('type', 'application');
+  LTool.AddPair('author', 'Olaf Monien');
   LTool.AddPair('name', cToolName);
   LTool.AddPair('version', cToolVersion);
 
@@ -287,7 +288,7 @@ begin
   LRoot := TJSONObject.Create;
   try
     // CycloneDX version
-    LRoot.AddPair('$schema', 'https://cyclonedx.org/schema/bom-1.5.schema.json');
+    LRoot.AddPair('$schema', 'http://cyclonedx.org/schema/bom-1.5.schema.json');
     LRoot.AddPair('bomFormat', 'CycloneDX');
     LRoot.AddPair('specVersion', cSpecVersion);
     LRoot.AddPair('serialNumber', 'urn:uuid:' + GenerateUuid);

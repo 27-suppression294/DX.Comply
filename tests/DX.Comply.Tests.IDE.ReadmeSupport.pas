@@ -74,7 +74,7 @@ begin
   LMarkdown := LoadDXComplyReadmeMarkdown;
 
   Assert.Contains(LMarkdown, '# DX.Comply');
-  Assert.Contains(LMarkdown, '## TL;DR');
+  Assert.Contains(LMarkdown, '## Why DX.Comply?');
 end;
 
 initialization
