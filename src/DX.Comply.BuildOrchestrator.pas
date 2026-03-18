@@ -69,6 +69,7 @@ type
     Executed: Boolean;
     ExitCode: Integer;
     Message: string;
+    Output: string;
     CommandLine: string;
     MapFilePath: string;
   end;
@@ -240,9 +241,14 @@ end;
 
 function TBuildOrchestrator.ExecutePlan(const APlan: TDeepEvidenceBuildPlan): TDeepEvidenceBuildResult;
 var
+  LBytesRead: Cardinal;
+  LBuffer: TBytes;
   LCommandLine: string;
   LExitCode: Cardinal;
+  LOutputBuilder: TStringBuilder;
+  LPipeRead, LPipeWrite: THandle;
   LProcessInfo: TProcessInformation;
+  LSecurityAttributes: TSecurityAttributes;
   LStartupInfo: TStartupInfo;
 begin
   Result := Default(TDeepEvidenceBuildResult);
@@ -269,23 +275,55 @@ begin
     Exit;
   end;
 
-  FillChar(LStartupInfo, SizeOf(LStartupInfo), 0);
-  LStartupInfo.cb := SizeOf(LStartupInfo);
-  FillChar(LProcessInfo, SizeOf(LProcessInfo), 0);
+  LPipeRead := 0;
+  LPipeWrite := 0;
+  FillChar(LSecurityAttributes, SizeOf(LSecurityAttributes), 0);
+  LSecurityAttributes.nLength := SizeOf(LSecurityAttributes);
+  LSecurityAttributes.bInheritHandle := True;
 
-  LCommandLine := APlan.CommandLine;
-  UniqueString(LCommandLine);
-
-  if not CreateProcess(nil, PChar(LCommandLine), nil, nil, False, CREATE_NO_WINDOW,
-    nil, PChar(APlan.WorkingDirectory), LStartupInfo, LProcessInfo) then
+  if not CreatePipe(LPipeRead, LPipeWrite, @LSecurityAttributes, 0) then
   begin
     Result.Success := False;
-    Result.Message := SysErrorMessage(GetLastError);
+    Result.Message := 'Failed to create output pipe: ' + SysErrorMessage(GetLastError);
     Exit;
   end;
 
-  Result.Executed := True;
   try
+    SetHandleInformation(LPipeRead, HANDLE_FLAG_INHERIT, 0);
+
+    FillChar(LStartupInfo, SizeOf(LStartupInfo), 0);
+    LStartupInfo.cb := SizeOf(LStartupInfo);
+    LStartupInfo.dwFlags := STARTF_USESTDHANDLES or STARTF_USESHOWWINDOW;
+    LStartupInfo.wShowWindow := SW_HIDE;
+    LStartupInfo.hStdOutput := LPipeWrite;
+    LStartupInfo.hStdError := LPipeWrite;
+    FillChar(LProcessInfo, SizeOf(LProcessInfo), 0);
+
+    LCommandLine := APlan.CommandLine;
+    UniqueString(LCommandLine);
+
+    if not CreateProcess(nil, PChar(LCommandLine), nil, nil, True, CREATE_NO_WINDOW,
+      nil, PChar(APlan.WorkingDirectory), LStartupInfo, LProcessInfo) then
+    begin
+      Result.Success := False;
+      Result.Message := 'Failed to start build process: ' + SysErrorMessage(GetLastError);
+      Exit;
+    end;
+
+    CloseHandle(LPipeWrite);
+    LPipeWrite := 0;
+
+    Result.Executed := True;
+    LOutputBuilder := TStringBuilder.Create;
+    try
+      SetLength(LBuffer, 4096);
+      while ReadFile(LPipeRead, LBuffer[0], Length(LBuffer), LBytesRead, nil) and (LBytesRead > 0) do
+        LOutputBuilder.Append(TEncoding.UTF8.GetString(LBuffer, 0, LBytesRead));
+      Result.Output := Trim(LOutputBuilder.ToString);
+    finally
+      LOutputBuilder.Free;
+    end;
+
     WaitForSingleObject(LProcessInfo.hProcess, INFINITE);
     if not GetExitCodeProcess(LProcessInfo.hProcess, LExitCode) then
       LExitCode := Cardinal(-1);
@@ -303,9 +341,14 @@ begin
       Result.Message := 'Deep-Evidence build completed successfully.'
     else
       Result.Message := 'Deep-Evidence build failed with exit code ' + IntToStr(Result.ExitCode) + '.';
-  finally
+
     CloseHandle(LProcessInfo.hThread);
     CloseHandle(LProcessInfo.hProcess);
+  finally
+    if LPipeRead <> 0 then
+      CloseHandle(LPipeRead);
+    if LPipeWrite <> 0 then
+      CloseHandle(LPipeWrite);
   end;
 end;
 
