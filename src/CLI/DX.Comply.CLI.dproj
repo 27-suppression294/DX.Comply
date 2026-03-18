@@ -7,7 +7,7 @@
         <MainSource>DX.Comply.CLI.dpr</MainSource>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <ProjectGuid>{D3E4F5A6-B7C8-4D9E-0F1A-2B3C4D5E6F7A}</ProjectGuid>
-        <ProjectName Condition="'$(ProjectName)'==''">dxcomply</ProjectName>
+        <ProjectName Condition="'$(ProjectName)'==''">DX.Comply.CLI</ProjectName>
         <ProjectVersion>20.3</ProjectVersion>
         <TargetedPlatforms>3</TargetedPlatforms>
     </PropertyGroup>
@@ -35,7 +35,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <SanitizedProjectName>dxcomply</SanitizedProjectName>
+        <SanitizedProjectName>DX_Comply_CLI</SanitizedProjectName>
         <DCC_DcuOutput>..\..\build\$(Platform)\$(Config)\dcu</DCC_DcuOutput>
         <DCC_Description>DX.Comply CI Pipeline CLI</DCC_Description>
         <DCC_ExeOutput>..\..\build\$(Platform)\$(Config)</DCC_ExeOutput>
