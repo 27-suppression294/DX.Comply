@@ -123,15 +123,15 @@ type
     /// </summary>
     procedure ShowAboutDialog;
     /// <summary>
-    /// Shows the build confirmation dialog and returns True when the user confirms.
-    /// </summary>
-    function ShowBuildConfirmationDialog(const AProjectPath: string;
-      const APlan: TDeepEvidenceBuildPlan; out ADisablePrompt: Boolean): Boolean;
-    /// <summary>
     /// Opens the generated HTML report when the current settings request it.
     /// </summary>
     procedure TryOpenHtmlReport(const ASbomOutputPath: string;
       const ASettings: TDXComplyIDESettings; const AConfig: TSbomConfig);
+    /// <summary>
+    /// Attempts a Deep-Evidence build via the OTA project builder on the main thread.
+    /// Temporarily forces DCC_MapFile=3 and restores the original value after the build.
+    /// </summary>
+    function TryOTADeepEvidenceBuild(const AExpectedMapFilePath: string): Boolean;
     /// <summary>
     /// Prepares optional Deep-Evidence automation and adjusts the config if the user declines it.
     /// </summary>
@@ -509,13 +509,6 @@ begin
   ShowDXComplyAboutDialog;
 end;
 
-function TDxComplyWizard.ShowBuildConfirmationDialog(const AProjectPath: string;
-  const APlan: TDeepEvidenceBuildPlan; out ADisablePrompt: Boolean): Boolean;
-begin
-  Result := ShowDXComplyBuildConfirmationDialog(AProjectPath, APlan,
-    ADisablePrompt);
-end;
-
 procedure TDxComplyWizard.TryOpenHtmlReport(const ASbomOutputPath: string;
   const ASettings: TDXComplyIDESettings; const AConfig: TSbomConfig);
 var
@@ -543,17 +536,59 @@ begin
     TIDELogger.Warning('DX.Comply: Failed to open the HTML report in the default browser: ' + LHtmlReportPath);
 end;
 
+function TDxComplyWizard.TryOTADeepEvidenceBuild(
+  const AExpectedMapFilePath: string): Boolean;
+var
+  LProject: IOTAProject;
+  LProjectOptions: IOTAProjectOptions;
+  LOriginalMapFileValue: Variant;
+begin
+  Result := False;
+  LProject := GetActiveProject;
+  if not Assigned(LProject) then
+  begin
+    TIDELogger.Warning('DX.Comply: OTA build skipped - no active project.');
+    Exit;
+  end;
+
+  LProjectOptions := LProject.ProjectOptions;
+  if not Assigned(LProjectOptions) then
+  begin
+    TIDELogger.Warning('DX.Comply: OTA build skipped - project options not available.');
+    Exit;
+  end;
+
+  LOriginalMapFileValue := LProjectOptions.Values['DCC_MapFile'];
+  try
+    LProjectOptions.Values['DCC_MapFile'] := 3;
+    TIDELogger.Info('DX.Comply: Starting OTA Deep-Evidence build (DCC_MapFile=3)...');
+
+    Result := LProject.ProjectBuilder.BuildProject(cmOTAMake, False, True);
+
+    if Result then
+    begin
+      if (AExpectedMapFilePath <> '') and not TFile.Exists(AExpectedMapFilePath) then
+      begin
+        TIDELogger.Warning('DX.Comply: OTA build succeeded but MAP file not found: ' +
+          AExpectedMapFilePath);
+        Result := False;
+      end
+      else
+        TIDELogger.Info('DX.Comply: OTA Deep-Evidence build completed successfully.');
+    end
+    else
+      TIDELogger.Warning('DX.Comply: OTA Deep-Evidence build failed.');
+  finally
+    LProjectOptions.Values['DCC_MapFile'] := LOriginalMapFileValue;
+  end;
+end;
+
 function TDxComplyWizard.TryPrepareDeepEvidenceBuild(const AProjectPath: string;
   const ASettings: TDXComplyIDESettings; var AConfig: TSbomConfig;
   AForceDeepEvidence: Boolean): Boolean;
 var
-  LDisablePrompt: Boolean;
-  LBuildOptions: TDeepEvidenceBuildOptions;
-  LBuildOrchestrator: IBuildOrchestrator;
-  LPlan: TDeepEvidenceBuildPlan;
   LProjectInfo: TProjectInfo;
   LProjectScanner: IProjectScanner;
-  LUpdatedSettings: TDXComplyIDESettings;
 begin
   Result := True;
   if AConfig.DeepEvidenceMode = debDisabled then
@@ -563,52 +598,23 @@ begin
     LProjectScanner := TProjectScanner.Create;
     LProjectInfo := LProjectScanner.Scan(AProjectPath, AConfig.Platform, AConfig.Configuration);
     try
-      LBuildOptions := TDeepEvidenceBuildOptions.Default;
-      LBuildOptions.Mode := AConfig.DeepEvidenceMode;
-      LBuildOptions.DelphiVersion := AConfig.DeepEvidenceDelphiVersion;
-      LBuildOptions.BuildScriptPathOverride := AConfig.DeepEvidenceBuildScriptPath;
-      LBuildOrchestrator := TBuildOrchestrator.Create;
-      LPlan := LBuildOrchestrator.CreatePlan(LProjectInfo, LBuildOptions);
-
-      if not LPlan.ShouldExecute then
-      begin
-        TIDELogger.Info('DX.Comply: Deep-Evidence auto-build is not required for the current project state.');
-        Exit;
-      end;
-
-      if LPlan.ScriptPath = '' then
-      begin
-        TIDELogger.Warning('DX.Comply: Build script (DelphiBuildDPROJ.ps1) not found. ' +
-          'Configure the path under Tools > Options > DX' + #$2024 + 'Comply, or place it ' +
-          'in a "build" folder next to your project. Skipping Deep-Evidence build.');
-        if AForceDeepEvidence and not ASettings.ContinueWithoutDeepEvidenceOnBuildFailure then
-        begin
-          Result := False;
-          Exit;
-        end;
-        AConfig.DeepEvidenceMode := debDisabled;
-        Exit;
-      end;
-
-      TIDELogger.Info('DX.Comply: Deep-Evidence build prepared for ' + LPlan.Configuration + '/' + LPlan.Platform + '.');
-      if Trim(LPlan.ExpectedMapFilePath) <> '' then
-        TIDELogger.Info('DX.Comply: Expected MAP file: ' + LPlan.ExpectedMapFilePath);
+      TIDELogger.Info('DX.Comply: Deep-Evidence build prepared for ' +
+        AConfig.Configuration + '/' + AConfig.Platform + '.');
+      if Trim(LProjectInfo.MapFilePath) <> '' then
+        TIDELogger.Info('DX.Comply: Expected MAP file: ' + LProjectInfo.MapFilePath);
 
       if ASettings.PromptBeforeBuild then
       begin
-        if not ShowBuildConfirmationDialog(AProjectPath, LPlan, LDisablePrompt) then
+        if MessageDlg('DX.Comply will compile the project with detailed MAP output ' +
+          'to collect Deep-Evidence data.' + sLineBreak + sLineBreak +
+          'Project: ' + AProjectPath + sLineBreak +
+          'Configuration: ' + AConfig.Configuration + ' / ' + AConfig.Platform + sLineBreak +
+          sLineBreak + 'Continue?',
+          mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
         begin
           TIDELogger.Warning('DX.Comply: CRA compliance generation was cancelled by the user.');
           Result := False;
           Exit;
-        end;
-
-        if LDisablePrompt then
-        begin
-          LUpdatedSettings := ASettings;
-          LUpdatedSettings.PromptBeforeBuild := False;
-          TDXComplyIDESettingsStore.Save(LUpdatedSettings);
-          TIDELogger.Info('DX.Comply: The build confirmation dialog was disabled in IDE settings.');
         end;
       end;
 
@@ -616,6 +622,23 @@ begin
       begin
         TIDELogger.Info('DX.Comply: Saving modified editors before the Deep-Evidence build...');
         SaveModifiedFiles;
+      end;
+
+      if TryOTADeepEvidenceBuild(LProjectInfo.MapFilePath) then
+      begin
+        AConfig.DeepEvidenceMode := debDisabled;
+        TIDELogger.Info('DX.Comply: OTA build succeeded. Engine-level build skipped.');
+      end
+      else
+      begin
+        TIDELogger.Warning('DX.Comply: OTA build was not successful. ' +
+          'Deep-Evidence may be incomplete.');
+        if AForceDeepEvidence and not ASettings.ContinueWithoutDeepEvidenceOnBuildFailure then
+        begin
+          Result := False;
+          Exit;
+        end;
+        AConfig.DeepEvidenceMode := debDisabled;
       end;
     finally
       LProjectInfo.Free;

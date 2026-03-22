@@ -8,12 +8,10 @@ configuration file in CI mode), combines project metadata with build evidence,
 scans the build output directory, hashes every artefact, and writes a
 standards-compliant SBOM.
 
-Current Deep-Evidence status:
-
-- the engine can consume MAP-derived evidence when a detailed Delphi `.map` file exists
-- Deep-Evidence mode can be enabled through `.dxcomply.json`
-- the engine can try to trigger an explicit build before evidence collection
-- CLI-specific Deep-Evidence switches are not exposed yet; use the config file for now
+The CLI tool expects an existing detailed MAP file — it does **not** compile your
+project. Your pipeline must build the project with `DCC_MapFile=3` before
+running `dxcomply`. This keeps the CLI lightweight and avoids any dependency on
+build scripts or Delphi installations beyond what your pipeline already provides.
 
 The `--no-pause` flag suppresses the interactive "Press Enter to quit" prompt
 and is **required** in all automated pipeline steps.
@@ -25,6 +23,9 @@ and is **required** in all automated pipeline steps.
 ### Basic SBOM generation
 
 ```yaml
+- name: Build with detailed MAP
+  run: msbuild src/MyApp.dproj /p:Config=Release /p:Platform=Win32 /p:DCC_MapFile=3
+
 - name: Generate SBOM
   run: dxcomply --project=src/MyApp.dproj --format=cyclonedx-json --output=bom.json --no-pause
 
@@ -50,8 +51,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build project
-        run: msbuild src/MyApp.dproj /p:Config=Release /p:Platform=Win32
+      - name: Build project with detailed MAP
+        run: msbuild src/MyApp.dproj /p:Config=Release /p:Platform=Win32 /p:DCC_MapFile=3
 
       - name: Generate SBOM
         run: >
@@ -131,18 +132,16 @@ of the file contents.
 
 ### Deep Evidence in CI
 
-When `deepEvidence.build` is set to `true`, DX.Comply will try to run the shared
-`build/DelphiBuildDPROJ.ps1` script before collecting evidence. This currently
-requires:
+The CLI tool does not compile your project — it relies on the MAP file that your
+build step produces. To get full unit-level evidence, ensure your build step
+includes the `DCC_MapFile=3` MSBuild property:
 
-- a Windows runner
-- a Delphi installation visible to the build script
-- permission to run the PowerShell build helper
+```bash
+msbuild src/MyApp.dproj /p:Config=Release /p:Platform=Win32 /p:DCC_MapFile=3
+```
 
-If the runner does not have Delphi installed, the Deep-Evidence build step will
-fail before evidence collection. In that environment, either disable
-`deepEvidence.build` or provide an existing detailed `.map` file as part of the
-build output.
+If you use `.dxcomply.json`, the `deepEvidence.build` option is ignored by the
+CLI — the MAP file must already exist before `dxcomply` runs.
 
 ---
 

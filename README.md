@@ -89,11 +89,30 @@ DX.Comply produces standards-compliant **CycloneDX 1.5** SBOMs. Each linked unit
 
 ### Option B — Command line / CI
 
+The CLI tool expects an existing detailed MAP file. Build your project first with `DCC_MapFile=3`, then run:
+
 ```bash
-dxcomply --project=MyApp.dproj --format=cyclonedx-json --output=bom.json
+dxcomply --project=MyApp.dproj --format=cyclonedx-json --output=bom.json --no-pause
 ```
 
 See [docs/CI-Integration.md](docs/CI-Integration.md) for GitHub Actions examples and CI configuration.
+
+### Option C — Legacy Delphi (Delphi 7 and older)
+
+DX.Comply can generate SBOMs for projects built with any Delphi version — including Delphi 7 — as long as a **detailed MAP file** is available. No IDE plugin is required.
+
+1. Open your project in the legacy Delphi IDE.
+2. Go to **Project > Options > Linker** and set **Map file** to **Detailed**.
+3. Build your project — this produces a `.map` file in the output directory.
+4. Run the CLI tool against the `.dproj` (or `.dof` for very old versions):
+
+```bash
+dxcomply --project=MyApp.dproj --output=bom.json --no-pause
+```
+
+> **Tip:** You can automate this with a **Post-Build Event** in a dedicated build configuration. Create a configuration named e.g. `SBOM` that enables detailed MAP output and runs `dxcomply` as a post-build step. This way, a single build generates both your application and its SBOM.
+
+See [docs/LegacySupport.md](docs/LegacySupport.md) for details.
 
 ---
 
@@ -102,7 +121,7 @@ See [docs/CI-Integration.md](docs/CI-Integration.md) for GitHub Actions examples
 | Evidence source | Details |
 |---|---|
 | **Project metadata** | Name, version, platform, configuration, DllSuffix |
-| **Deep-Evidence build** | Triggers a dedicated build with `DCC_MapFile=3` to produce a detailed MAP file |
+| **Deep-Evidence build** | IDE plugin: compiles via OTA with `DCC_MapFile=3`; CLI: expects a pre-built MAP file |
 | **MAP file analysis** | Extracts all linked units from segment entries and line-number sections |
 | **Unit resolution** | Resolves each unit to its source/DCU/BPL file with SHA-256 hash |
 | **Origin classification** | Classifies each unit as Embarcadero RTL, VCL, FMX, Local project, or Third party |
@@ -190,9 +209,13 @@ The CRA requires (Annex I, Part II):
 
 ## Requirements
 
-- **RAD Studio / Delphi 11 Alexandria** or newer
-- **Windows** build host
-- No internet connection required — all processing is local
+| Mode | Requirement |
+|---|---|
+| **IDE plugin** | RAD Studio / Delphi 11 Alexandria or newer |
+| **CLI tool** | Any Delphi version (requires a pre-built detailed MAP file) |
+| **Platform** | Windows build host |
+
+No internet connection required — all processing is local.
 
 ---
 
@@ -202,6 +225,7 @@ The CRA requires (Annex I, Part II):
 |---|---|
 | [Architecture](docs/Architecture.md) | Engine pipeline, component overview, unit origin classification |
 | [CI Integration](docs/CI-Integration.md) | Command-line usage, GitHub Actions examples, CI configuration |
+| [Legacy Support](docs/LegacySupport.md) | Using DX.Comply with Delphi 7 and other legacy versions |
 | [Example SBOM (JSON)](docs/examples/AlienInvasion.bom.json) | Full CycloneDX 1.5 SBOM generated from the AlienInvasion sample |
 | [Example HTML Report](docs/examples/AlienInvasion.bom.report.html) | Human-readable compliance report for the same project |
 

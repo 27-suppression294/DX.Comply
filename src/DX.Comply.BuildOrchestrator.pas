@@ -387,11 +387,21 @@ end;
 
 function TBuildOrchestrator.ResolveBuildScriptPath(const AProjectInfo: TProjectInfo;
   const ABuildScriptPathOverride: string): string;
+var
+  LProjectDirectory: string;
 begin
   if Trim(ABuildScriptPathOverride) <> '' then
     Exit(TPath.GetFullPath(ABuildScriptPathOverride));
 
   Result := FindBuildScriptFromDirectory(GetModuleDirectory);
+  if Result <> '' then
+    Exit;
+
+  LProjectDirectory := AProjectInfo.ProjectDir;
+  if (LProjectDirectory = '') and (AProjectInfo.ProjectPath <> '') then
+    LProjectDirectory := TPath.GetDirectoryName(AProjectInfo.ProjectPath);
+
+  Result := FindBuildScriptFromDirectory(LProjectDirectory);
   if Result <> '' then
     Exit;
 
