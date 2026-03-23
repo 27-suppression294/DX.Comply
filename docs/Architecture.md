@@ -61,6 +61,11 @@ Every SBOM generation follows the same pipeline, regardless of whether it was tr
 | `DX.Comply.Spdx.Writer.pas` | SPDX 2.3 JSON output |
 | `DX.Comply.Report.HtmlWriter.pas` | HTML companion report |
 | `DX.Comply.Report.MarkdownWriter.pas` | Markdown companion report |
+| `DX.Comply.Report.Intf.pas` | Report writer interface and shared report types |
+| `DX.Comply.Report.Support.pas` | Common report helper functions (HTML escaping, formatting) |
+| `DX.Comply.BuildEvidence.Intf.pas` | Build evidence types and interfaces |
+| `DX.Comply.Schema.Validator.pas` | Post-generation SBOM schema validation |
+| `DX.Comply.CLI.Options.pas` | CLI argument parser (`--project`, `--format`, `--map-dir`, etc.) |
 
 ## Deep-Evidence build
 
@@ -96,7 +101,7 @@ Each resolved unit is emitted as a CycloneDX `component` with `type: "library"`,
 
 ## Test suite
 
-172 DUnitX tests cover the full pipeline. Run:
+176 DUnitX tests cover the full pipeline. Run:
 
 ```
 build\Win32\Debug\DX.Comply.Tests.exe --no-pause

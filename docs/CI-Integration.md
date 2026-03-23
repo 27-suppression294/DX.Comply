@@ -16,6 +16,15 @@ build scripts or Delphi installations beyond what your pipeline already provides
 The `--no-pause` flag suppresses the interactive "Press Enter to quit" prompt
 and is **required** in all automated pipeline steps.
 
+If the MAP file is not located in the default output directory derived from the
+`.dproj`, use `--map-dir` to point `dxcomply` at the correct directory:
+
+```bash
+dxcomply --project=src/MyApp.dproj --map-dir=build/Win32/Release --output=bom.json --no-pause
+```
+
+This is also supported in `.dxcomply.json` via the `mapDir` key.
+
 ---
 
 ## GitHub Actions

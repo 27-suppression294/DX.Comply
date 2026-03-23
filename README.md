@@ -77,6 +77,20 @@ DX.Comply produces standards-compliant **CycloneDX 1.5** SBOMs. Each linked unit
 
 ---
 
+## Installation
+
+### Installer (Delphi 13)
+
+Run the Inno Setup installer from the [Releases](https://github.com/omonien/DX.Comply/releases) page. It registers the IDE plugin and CLI tool automatically.
+
+### Manual
+
+1. Open `DX.Comply.groupproj` in RAD Studio.
+2. Build and install the `DX.Comply.IDE` design-time package.
+3. Optionally build the `DX.Comply.CLI` console application for command-line / CI use.
+
+---
+
 ## Quick Start
 
 ### Option A — RAD Studio IDE (recommended)
@@ -93,6 +107,12 @@ The CLI tool expects an existing detailed MAP file. Build your project first wit
 
 ```bash
 dxcomply --project=MyApp.dproj --format=cyclonedx-json --output=bom.json --no-pause
+```
+
+If the MAP file is in a non-standard directory, use `--map-dir`:
+
+```bash
+dxcomply --project=MyApp.dproj --map-dir=build/Win32/Release --output=bom.json --no-pause
 ```
 
 See [docs/CI-Integration.md](docs/CI-Integration.md) for GitHub Actions examples and CI configuration.

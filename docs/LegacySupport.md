@@ -91,6 +91,24 @@ The critical part is `/p:DCC_MapFile=3` — this tells MSBuild to produce the de
 
 ---
 
+## MAP File Directory Override
+
+If the MAP file is not in the default output directory that DX.Comply derives from the `.dproj`, you can specify the directory explicitly:
+
+```bash
+dxcomply --project=MyApp.dproj --map-dir=C:\builds\output --output=bom.json --no-pause
+```
+
+This is particularly useful for legacy projects where output paths are configured outside the `.dproj` or when the MAP file is generated in a non-standard location.
+
+---
+
+## AnyCPU Platform Support
+
+Some legacy Delphi 2007 projects use `AnyCPU` instead of `Win32` as the platform identifier in their `.dproj` condition attributes. DX.Comply automatically falls back to `AnyCPU` when no matching `$(Configuration)|$(Platform)` property group is found for `Win32`, so these projects work without any manual adjustment.
+
+---
+
 ## Encoding Considerations
 
 - **Delphi 7** writes MAP files in **ANSI** encoding (Windows-1252 / ISO-8859-1).
