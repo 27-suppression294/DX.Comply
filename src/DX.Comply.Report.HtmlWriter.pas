@@ -249,13 +249,6 @@ begin
       AddSummaryCard(Lines, 'Warnings', '0', 'good')
     else
       AddSummaryCard(Lines, 'Warnings', IntToStr(LWarningsCount), 'warn');
-    if AData.DeepEvidenceResult.Executed or not AData.DeepEvidenceResult.Success and AData.DeepEvidenceRequested then
-    begin
-      if AData.DeepEvidenceResult.Success then
-        AddSummaryCard(Lines, 'Deep Evidence Build', DeepEvidenceStatusText(AData), 'good')
-      else
-        AddSummaryCard(Lines, 'Deep Evidence Build', DeepEvidenceStatusText(AData), 'bad');
-    end;
     if AData.ValidationResult.IsValid then
       AddSummaryCard(Lines, 'Validation', ValidationStatusText(AData), 'good')
     else

@@ -228,9 +228,9 @@ var
 begin
   SetLength(FMetadata.Properties, 2);
   FMetadata.Properties[0] := TSbomProperty.Create(
-    'net.developer-experts.dx-comply:deep-evidence.requested', 'true');
+    'net.developer-experts.dx-comply:document.profile', 'cra-compliance-assessment');
   FMetadata.Properties[1] := TSbomProperty.Create(
-    'net.developer-experts.dx-comply:deep-evidence.command-line', 'powershell -File build.ps1');
+    'net.developer-experts.dx-comply:assessment.warning-count', '0');
   SetLength(FMetadata.ComponentProperties, 1);
   FMetadata.ComponentProperties[0] := TSbomProperty.Create(
     'net.developer-experts.dx-comply:build.configuration', 'Release');
@@ -239,8 +239,8 @@ begin
   LContent := LoadOutputContent;
 
   Assert.IsTrue(Pos('<properties>', LContent) > 0);
-  Assert.IsTrue(Pos('<property name="net.developer-experts.dx-comply:deep-evidence.requested">true</property>', LContent) > 0);
-  Assert.IsTrue(Pos('<property name="net.developer-experts.dx-comply:deep-evidence.command-line">powershell -File build.ps1</property>', LContent) > 0);
+  Assert.IsTrue(Pos('<property name="net.developer-experts.dx-comply:document.profile">cra-compliance-assessment</property>', LContent) > 0);
+  Assert.IsTrue(Pos('<property name="net.developer-experts.dx-comply:assessment.warning-count">0</property>', LContent) > 0);
   Assert.IsTrue(Pos('<property name="net.developer-experts.dx-comply:build.configuration">Release</property>', LContent) > 0);
 end;
 

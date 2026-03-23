@@ -127,10 +127,6 @@ begin
   FData.CompositionEvidence := FCompositionEvidence;
   FData.Artefacts := FArtefacts;
   FData.Warnings := FWarnings;
-  FData.DeepEvidenceRequested := True;
-  FData.DeepEvidenceResult.Success := True;
-  FData.DeepEvidenceResult.Executed := False;
-  FData.DeepEvidenceResult.Message := 'Skipped because the expected MAP file already existed.';
   FData.ValidationResult := TValidationResult.CreateValid;
 end;
 

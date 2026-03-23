@@ -143,9 +143,6 @@ begin
   FData.CompositionEvidence := FCompositionEvidence;
   FData.Artefacts := FArtefacts;
   FData.Warnings := FWarnings;
-  FData.DeepEvidenceRequested := True;
-  FData.DeepEvidenceResult.Success := True;
-  FData.DeepEvidenceResult.Executed := True;
   FData.ValidationResult := TValidationResult.CreateValid;
 end;
 

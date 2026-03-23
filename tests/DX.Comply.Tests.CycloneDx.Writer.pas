@@ -382,9 +382,9 @@ var
 begin
   SetLength(FMetadata.Properties, 2);
   FMetadata.Properties[0] := TSbomProperty.Create(
-    'net.developer-experts.dx-comply:deep-evidence.requested', 'true');
+    'net.developer-experts.dx-comply:document.profile', 'cra-compliance-assessment');
   FMetadata.Properties[1] := TSbomProperty.Create(
-    'net.developer-experts.dx-comply:deep-evidence.command-line', 'powershell -File build.ps1');
+    'net.developer-experts.dx-comply:assessment.warning-count', '0');
   SetLength(FMetadata.ComponentProperties, 1);
   FMetadata.ComponentProperties[0] := TSbomProperty.Create(
     'net.developer-experts.dx-comply:build.configuration', 'Release');
@@ -403,11 +403,11 @@ begin
       'metadata.properties must be present when BOM metadata properties are provided');
     Assert.IsNotNull(LProperties,
       'metadata.component.properties must be present when component properties are provided');
-    Assert.AreEqual('net.developer-experts.dx-comply:deep-evidence.requested',
+    Assert.AreEqual('net.developer-experts.dx-comply:document.profile',
       (LBomProperties.Items[0] as TJSONObject).GetValue<string>('name'));
-    Assert.AreEqual('true',
+    Assert.AreEqual('cra-compliance-assessment',
       (LBomProperties.Items[0] as TJSONObject).GetValue<string>('value'));
-    Assert.AreEqual('net.developer-experts.dx-comply:deep-evidence.command-line',
+    Assert.AreEqual('net.developer-experts.dx-comply:assessment.warning-count',
       (LBomProperties.Items[1] as TJSONObject).GetValue<string>('name'));
     Assert.AreEqual('net.developer-experts.dx-comply:build.configuration',
       (LProperties.Items[0] as TJSONObject).GetValue<string>('name'));

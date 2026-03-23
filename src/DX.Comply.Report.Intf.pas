@@ -22,7 +22,6 @@ uses
   System.Generics.Collections,
   DX.Comply.Engine.Intf,
   DX.Comply.BuildEvidence.Intf,
-  DX.Comply.BuildOrchestrator,
   DX.Comply.Schema.Validator;
 
 type
@@ -56,8 +55,6 @@ type
     CompositionEvidence: TCompositionEvidence;
     Artefacts: TArtefactList;
     Warnings: TList<string>;
-    DeepEvidenceRequested: Boolean;
-    DeepEvidenceResult: TDeepEvidenceBuildResult;
     ValidationResult: TValidationResult;
     /// <summary>
     /// False when the SBOM was generated with composition evidence excluded

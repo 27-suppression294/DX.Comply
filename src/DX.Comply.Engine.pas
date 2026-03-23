@@ -287,8 +287,6 @@ begin
   Result.CompositionEvidence := ACompositionEvidence;
   Result.Artefacts := AArtefacts;
   Result.Warnings := AWarnings;
-  Result.DeepEvidenceRequested := FConfig.DeepEvidenceMode <> debDisabled;
-  Result.DeepEvidenceResult := ADeepEvidenceBuildResult;
   Result.ValidationResult := AValidationResult;
   Result.CompositionEvidenceIncluded := FConfig.IncludeCompositionEvidence;
 end;
@@ -634,18 +632,6 @@ var
       Result := 'release';
   end;
 
-  function DeepEvidenceModeToMetadataValue: string;
-  begin
-    case FConfig.DeepEvidenceMode of
-      debAlways:
-        Result := 'always';
-      debWhenMapMissing:
-        Result := 'when-map-missing';
-    else
-      Result := 'disabled';
-    end;
-  end;
-
   function EffectiveMapFilePath: string;
   begin
     Result := Trim(ADeepEvidenceBuildResult.MapFilePath);
@@ -675,17 +661,6 @@ begin
   LComponentProperties := TList<TSbomProperty>.Create;
   try
     AddBomProperty(PropertyName('document', 'profile'), 'cra-compliance-assessment');
-    AddBomProperty(PropertyName('deep-evidence', 'mode'), DeepEvidenceModeToMetadataValue);
-    AddBomProperty(PropertyName('deep-evidence', 'requested'),
-      BoolToMetadataValue(FConfig.DeepEvidenceMode <> debDisabled));
-    AddBomProperty(PropertyName('deep-evidence', 'executed'),
-      BoolToMetadataValue(ADeepEvidenceBuildResult.Executed));
-    AddBomProperty(PropertyName('deep-evidence', 'success'),
-      BoolToMetadataValue(ADeepEvidenceBuildResult.Success));
-    AddBomProperty(PropertyName('deep-evidence', 'exit-code'),
-      IntToStr(ADeepEvidenceBuildResult.ExitCode));
-    AddBomProperty(PropertyName('deep-evidence', 'message'), ADeepEvidenceBuildResult.Message);
-    AddBomProperty(PropertyName('deep-evidence', 'command-line'), ADeepEvidenceBuildResult.CommandLine);
     AddBomProperty(PropertyName('assessment', 'warning-count'), IntToStr(AWarnings.Count));
 
     AddComponentProperty(PropertyName('build', 'map-file'), EffectiveMapFilePath);

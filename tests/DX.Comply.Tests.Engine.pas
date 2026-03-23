@@ -375,8 +375,9 @@ begin
         'DX.Comply BOM metadata properties must be present on metadata.properties');
       Assert.IsNotNull(LComponentProperties,
         'DX.Comply component metadata properties must be present on metadata.component.properties');
-      Assert.AreEqual('false', FindPropertyValue(LBomProperties,
-        'net.developer-experts.dx-comply:deep-evidence.requested'));
+      Assert.IsTrue(FindPropertyValue(LBomProperties,
+        'net.developer-experts.dx-comply:document.profile') <> '',
+        'BOM must contain the document profile property');
       Assert.AreEqual('Release', FindPropertyValue(LComponentProperties,
         'net.developer-experts.dx-comply:build.configuration'));
       Assert.AreEqual('Win32', FindPropertyValue(LComponentProperties,

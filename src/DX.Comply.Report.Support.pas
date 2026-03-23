@@ -52,7 +52,6 @@ function UnitEvidenceKindToString(AValue: TUnitEvidenceKind): string;
 function UnitOriginKindToString(AValue: TUnitOriginKind): string;
 function ResolutionConfidenceToString(AValue: TResolutionConfidence): string;
 function ValidationStatusText(const AData: TComplianceReportData): string;
-function DeepEvidenceStatusText(const AData: TComplianceReportData): string;
 function SafeText(const AValue: string; const AFallback: string = 'n/a'): string;
 function DelphiRuntimeUnitsText(const AProjectInfo: TProjectInfo): string;
 function HumanReadableReportTitle: string;
@@ -69,8 +68,7 @@ function BuildConsolidatedUnitEvidenceRows(
 implementation
 
 uses
-  System.Generics.Defaults,
-  DX.Comply.BuildOrchestrator;
+  System.Generics.Defaults;
 
 function BuildEvidenceSourceKindToString(AValue: TBuildEvidenceSourceKind): string;
 begin
@@ -88,17 +86,6 @@ begin
   else
     Result := 'Unknown';
   end;
-end;
-
-function DeepEvidenceStatusText(const AData: TComplianceReportData): string;
-begin
-  if not AData.DeepEvidenceRequested then
-    Exit('Not requested');
-  if not AData.DeepEvidenceResult.Success then
-    Exit('Failed');
-  if AData.DeepEvidenceResult.Executed then
-    Exit('Executed successfully');
-  Result := SafeText(AData.DeepEvidenceResult.Message, 'Skipped');
 end;
 
 function DelphiRuntimeUnitsText(const AProjectInfo: TProjectInfo): string;

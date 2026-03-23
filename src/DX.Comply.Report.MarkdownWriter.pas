@@ -243,8 +243,6 @@ begin
     else
       AddKeyValue(Lines, 'Composition Evidence', 'Excluded (binary-only)');
     AddKeyValue(Lines, 'Warnings', IntToStr(LWarningsCount));
-    if AData.DeepEvidenceResult.Executed or not AData.DeepEvidenceResult.Success and AData.DeepEvidenceRequested then
-      AddKeyValue(Lines, 'Deep Evidence Build', DeepEvidenceStatusText(AData));
     AddKeyValue(Lines, 'Validation', ValidationStatusText(AData));
     Lines.Add('');
     AddValidation(Lines, AData);
