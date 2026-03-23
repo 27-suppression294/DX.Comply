@@ -34,6 +34,7 @@ uses
   System.IOUtils,
   System.JSON,
   System.DateUtils,
+  System.RegularExpressions,
   System.Generics.Collections,
   DX.Comply.Engine.Intf,
   DX.Comply.BuildEvidence.Intf,
@@ -150,6 +151,12 @@ type
       const ABuildEvidence: TBuildEvidence): TCompositionEvidence;
     procedure AddCompositionEvidenceToArtefacts(
       const ACompositionEvidence: TCompositionEvidence;
+      const AArtefacts: TArtefactList);
+    procedure AddRuntimePackagesToArtefacts(
+      const AProjectInfo: TProjectInfo;
+      const AArtefacts: TArtefactList);
+    procedure AddExternalDllReferencesToArtefacts(
+      const AProjectInfo: TProjectInfo;
       const AArtefacts: TArtefactList);
   public
     /// <summary>
@@ -396,6 +403,139 @@ begin
     LArtefact.Confidence := ResolutionConfidenceToString(LResolvedUnit.Confidence);
 
     AArtefacts.Add(LArtefact);
+  end;
+end;
+
+procedure TDxComplyGenerator.AddRuntimePackagesToArtefacts(
+  const AProjectInfo: TProjectInfo;
+  const AArtefacts: TArtefactList);
+var
+  LArtefact: TArtefactInfo;
+  LPackageName: string;
+  LBplFileName: string;
+begin
+  if not Assigned(AProjectInfo.RuntimePackages) then
+    Exit;
+
+  for LPackageName in AProjectInfo.RuntimePackages do
+  begin
+    if Trim(LPackageName) = '' then
+      Continue;
+
+    if AProjectInfo.DllSuffix <> '' then
+      LBplFileName := LPackageName + AProjectInfo.DllSuffix + '.bpl'
+    else
+      LBplFileName := LPackageName + '.bpl';
+
+    LArtefact := Default(TArtefactInfo);
+    LArtefact.FilePath := '';
+    LArtefact.RelativePath := LBplFileName;
+    LArtefact.FileSize := -1;
+    LArtefact.Hash := '';
+    LArtefact.ArtefactType := 'runtime-package';
+    LArtefact.Origin := '';
+    LArtefact.Evidence := 'BPL';
+    LArtefact.Confidence := 'Declared';
+
+    AArtefacts.Add(LArtefact);
+  end;
+end;
+
+procedure TDxComplyGenerator.AddExternalDllReferencesToArtefacts(
+  const AProjectInfo: TProjectInfo;
+  const AArtefacts: TArtefactList);
+var
+  LArtefact: TArtefactInfo;
+  LDllNames: TList<string>;
+  LDllName: string;
+  LPasFiles: TList<string>;
+  LFilePath, LLine, LMatch: string;
+  LLines: TStringList;
+  LRegExExternal, LRegExLoadLib: TRegEx;
+  LRegExMatch: TMatch;
+  I: Integer;
+begin
+  LDllNames := TList<string>.Create;
+  LPasFiles := TList<string>.Create;
+  LLines := TStringList.Create;
+  try
+    // Collect all .pas files from explicit unit references
+    if Assigned(AProjectInfo.ExplicitUnitReferences) then
+      for I := 0 to AProjectInfo.ExplicitUnitReferences.Count - 1 do
+      begin
+        LFilePath := AProjectInfo.ExplicitUnitReferences[I].FilePath;
+        if (LFilePath <> '') and SameText(TPath.GetExtension(LFilePath), '.pas')
+          and TFile.Exists(LFilePath) and not LPasFiles.Contains(LFilePath) then
+          LPasFiles.Add(LFilePath);
+      end;
+
+    // Also include main source file (.dpr/.dpk)
+    if (AProjectInfo.MainSourcePath <> '') and TFile.Exists(AProjectInfo.MainSourcePath)
+      and not LPasFiles.Contains(AProjectInfo.MainSourcePath) then
+      LPasFiles.Add(AProjectInfo.MainSourcePath);
+
+    // Patterns:
+    //   external 'filename.dll'  (with optional delayed)
+    //   LoadLibrary('filename.dll')  /  LoadLibraryEx  /  SafeLoadLibrary
+    LRegExExternal := TRegEx.Create(
+      'external\s+''([^'']+\.(dll|bpl))''', [roIgnoreCase]);
+    LRegExLoadLib := TRegEx.Create(
+      '(?:LoadLibrary|LoadLibraryEx|SafeLoadLibrary)\s*\(\s*''([^'']+\.(dll|bpl))''',
+      [roIgnoreCase]);
+
+    for LFilePath in LPasFiles do
+    begin
+      try
+        LLines.LoadFromFile(LFilePath, TEncoding.UTF8);
+      except
+        try
+          LLines.LoadFromFile(LFilePath);
+        except
+          Continue;
+        end;
+      end;
+
+      for I := 0 to LLines.Count - 1 do
+      begin
+        LLine := LLines[I];
+
+        LRegExMatch := LRegExExternal.Match(LLine);
+        if LRegExMatch.Success then
+        begin
+          LMatch := LRegExMatch.Groups[1].Value;
+          if not LDllNames.Contains(LowerCase(LMatch)) then
+            LDllNames.Add(LowerCase(LMatch));
+        end;
+
+        LRegExMatch := LRegExLoadLib.Match(LLine);
+        if LRegExMatch.Success then
+        begin
+          LMatch := LRegExMatch.Groups[1].Value;
+          if not LDllNames.Contains(LowerCase(LMatch)) then
+            LDllNames.Add(LowerCase(LMatch));
+        end;
+      end;
+    end;
+
+    // Add discovered DLLs as artefacts
+    for LDllName in LDllNames do
+    begin
+      LArtefact := Default(TArtefactInfo);
+      LArtefact.FilePath := '';
+      LArtefact.RelativePath := LDllName;
+      LArtefact.FileSize := -1;
+      LArtefact.Hash := '';
+      LArtefact.ArtefactType := 'external-reference';
+      LArtefact.Origin := '';
+      LArtefact.Evidence := TPath.GetExtension(LDllName).ToUpper.TrimLeft(['.']);
+      LArtefact.Confidence := 'Source-scan';
+
+      AArtefacts.Add(LArtefact);
+    end;
+  finally
+    LLines.Free;
+    LPasFiles.Free;
+    LDllNames.Free;
   end;
 end;
 
@@ -851,6 +991,10 @@ begin
         LFormat := AFormat
       else
         LFormat := FConfig.Format;
+
+      DoProgress('Collecting dependencies...', 60);
+      AddRuntimePackagesToArtefacts(LProjectInfo, LArtefacts);
+      AddExternalDllReferencesToArtefacts(LProjectInfo, LArtefacts);
 
       DoProgress('Generating SBOM...', 70);
 

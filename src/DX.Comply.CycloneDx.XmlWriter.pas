@@ -199,7 +199,9 @@ var
 begin
   if AArtefact.ArtefactType = 'application' then
     LComponentType := 'application'
-  else if (AArtefact.ArtefactType = 'library') or (AArtefact.ArtefactType = 'unit-evidence') or (AArtefact.ArtefactType = 'package') then
+  else if (AArtefact.ArtefactType = 'library') or (AArtefact.ArtefactType = 'unit-evidence') or
+    (AArtefact.ArtefactType = 'package') or (AArtefact.ArtefactType = 'runtime-package') or
+    (AArtefact.ArtefactType = 'external-reference') then
     LComponentType := 'library'
   else
     LComponentType := 'file';

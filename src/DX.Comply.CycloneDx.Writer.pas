@@ -173,7 +173,9 @@ begin
     LComponent.AddPair('type', 'application')
   else if (AArtefact.ArtefactType = 'library') or
     (AArtefact.ArtefactType = 'unit-evidence') or
-    (AArtefact.ArtefactType = 'package') then
+    (AArtefact.ArtefactType = 'package') or
+    (AArtefact.ArtefactType = 'runtime-package') or
+    (AArtefact.ArtefactType = 'external-reference') then
     LComponent.AddPair('type', 'library')
   else
     LComponent.AddPair('type', 'file');
