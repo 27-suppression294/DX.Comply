@@ -811,7 +811,6 @@ function CreateSplashBitmap: HBITMAP;
 var
   LBmp: TBitmap;
 begin
-  Result := 0;
   LBmp := TBitmap.Create;
   try
     try

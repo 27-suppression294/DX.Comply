@@ -563,7 +563,6 @@ function ShowDXComplyProgressDialog(
 var
   LDialog: TFormDXComplyProgressDialog;
 begin
-  Result := False;
   LDialog := TFormDXComplyProgressDialog.Create(nil,
     AProjectPath, AOutputPath, AFormat, AConfig);
   try
