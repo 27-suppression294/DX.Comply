@@ -22,7 +22,7 @@ Every SBOM generation follows the same pipeline, regardless of whether it was tr
                                     │
                                     ▼
                             BuildOrchestrator
-                          (optional Deep-Evidence build)
+                          (optional MAP file build)
                                     │
                                     ▼
                           BuildEvidenceReader ──► TBuildEvidence
@@ -67,9 +67,11 @@ Every SBOM generation follows the same pipeline, regardless of whether it was tr
 | `DX.Comply.Schema.Validator.pas` | Post-generation SBOM schema validation |
 | `DX.Comply.CLI.Options.pas` | CLI argument parser (`--project`, `--format`, `--map-dir`, etc.) |
 
-## Deep-Evidence build
+## MAP file generation
 
-When enabled, DX.Comply triggers an explicit build of the target project with `DCC_MapFile=3` (detailed MAP) before collecting evidence. This ensures a MAP file exists even for projects that don't normally produce one.
+DX.Comply always performs a **Deep-Evidence analysis** — using the compiler-generated MAP file to resolve all linked units (PAS/DCU) with their dependencies, SHA-256 hashes, and origin classification. The MAP file is the single source of truth for dependency resolution.
+
+When a MAP file does not yet exist, DX.Comply can optionally trigger a build with `DCC_MapFile=3` (detailed MAP) to generate one. This is an implementation detail — the analysis quality is identical regardless of how the MAP file was produced.
 
 ### IDE plugin
 

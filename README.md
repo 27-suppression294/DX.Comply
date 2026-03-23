@@ -28,7 +28,7 @@ DX.Comply generates that documentation — a *Software Bill of Materials* (SBOM)
 
 *Generating an SBOM for the Embarcadero AlienInvasion sample project:*
 
-| Build Confirmation | Progress & Deep-Evidence Build | HTML Compliance Report |
+| Build Confirmation | Progress & MAP Build | HTML Compliance Report |
 |:---:|:---:|:---:|
 | ![Build Confirmation](docs/Screenshot.png) | ![Progress](docs/Screenshot2.png) | ![Report](docs/Screenshot3.png) |
 
@@ -138,10 +138,11 @@ See [docs/LegacySupport.md](docs/LegacySupport.md) for details.
 
 ## What DX.Comply analyses
 
+DX.Comply always performs a **Deep-Evidence analysis** based on the compiler-generated MAP file. This approach identifies every linked unit (PAS/DCU) with full dependency resolution, SHA-256 hashes, and origin classification. Whether the MAP file is generated automatically by the IDE plugin or provided manually for CLI usage makes no difference to the analysis quality.
+
 | Evidence source | Details |
 |---|---|
 | **Project metadata** | Name, version, platform, configuration, DllSuffix |
-| **Deep-Evidence build** | IDE plugin: compiles via OTA with `DCC_MapFile=3`; CLI: expects a pre-built MAP file |
 | **MAP file analysis** | Extracts all linked units from segment entries and line-number sections |
 | **Unit resolution** | Resolves each unit to its source/DCU/BPL file with SHA-256 hash |
 | **Origin classification** | Classifies each unit as Embarcadero RTL, VCL, FMX, Local project, or Third party |
