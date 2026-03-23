@@ -53,6 +53,20 @@ type
     /// </summary>
     [Test]
     procedure CreatePlan_UsesBuildScriptOverride;
+
+    /// <summary>
+    /// An empty MapFilePath must suppress build execution to prevent
+    /// EInOutArgumentException on empty path operations (regression #17).
+    /// </summary>
+    [Test]
+    procedure CreatePlan_EmptyMapFilePath_SkipsExecution;
+
+    /// <summary>
+    /// ExecutePlan must fail gracefully when ScriptPath is empty instead
+    /// of passing an empty string to TFile.Exists (regression #17).
+    /// </summary>
+    [Test]
+    procedure ExecutePlan_EmptyScriptPath_FailsGracefully;
   end;
 
 implementation
@@ -160,6 +174,50 @@ begin
   finally
     LProjectInfo.Free;
   end;
+end;
+
+procedure TBuildOrchestratorTests.CreatePlan_EmptyMapFilePath_SkipsExecution;
+var
+  LPlan: TDeepEvidenceBuildPlan;
+  LProjectInfo: TProjectInfo;
+begin
+  LProjectInfo := TProjectInfo.Create;
+  try
+    LProjectInfo.ProjectPath := 'C:\Repo\src\MyApp.dproj';
+    LProjectInfo.ProjectDir := 'C:\Repo\src';
+    LProjectInfo.Platform := 'Win32';
+    LProjectInfo.Configuration := 'Debug';
+    LProjectInfo.MapFilePath := '';
+
+    LPlan := FBuildOrchestrator.CreatePlan(LProjectInfo, BuildOptions(debWhenMapMissing));
+
+    Assert.IsFalse(LPlan.ShouldExecute,
+      'An empty MapFilePath must suppress build execution because the result cannot be verified');
+  finally
+    LProjectInfo.Free;
+  end;
+end;
+
+procedure TBuildOrchestratorTests.ExecutePlan_EmptyScriptPath_FailsGracefully;
+var
+  LPlan: TDeepEvidenceBuildPlan;
+  LResult: TDeepEvidenceBuildResult;
+begin
+  LPlan := Default(TDeepEvidenceBuildPlan);
+  LPlan.Enabled := True;
+  LPlan.ShouldExecute := True;
+  LPlan.ScriptPath := '';
+  LPlan.ProjectPath := 'C:\Repo\src\MyApp.dproj';
+  LPlan.Platform := 'Win32';
+  LPlan.Configuration := 'Debug';
+  LPlan.ExpectedMapFilePath := 'C:\Repo\build\Win32\Debug\MyApp.map';
+
+  LResult := FBuildOrchestrator.ExecutePlan(LPlan);
+
+  Assert.IsFalse(LResult.Success,
+    'An empty ScriptPath must produce a failure result, not an exception');
+  Assert.IsTrue(Pos('not found', LResult.Message) > 0,
+    'The failure message must indicate the build script was not found');
 end;
 
 initialization

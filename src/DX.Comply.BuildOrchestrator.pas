@@ -190,7 +190,7 @@ begin
       Result.ShouldExecute := Result.Enabled;
     debWhenMapMissing:
       Result.ShouldExecute := Result.Enabled and
-        ((Result.ExpectedMapFilePath = '') or not TFile.Exists(Result.ExpectedMapFilePath));
+        (Result.ExpectedMapFilePath <> '') and not TFile.Exists(Result.ExpectedMapFilePath);
   else
     Result.ShouldExecute := False;
   end;
@@ -260,7 +260,7 @@ begin
     Exit;
   end;
 
-  if not TFile.Exists(APlan.ScriptPath) then
+  if (APlan.ScriptPath = '') or not TFile.Exists(APlan.ScriptPath) then
   begin
     Result.Success := False;
     Result.Message := 'Build script not found: ' + APlan.ScriptPath;

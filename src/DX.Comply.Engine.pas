@@ -932,7 +932,16 @@ begin
     ReportWarnings(LProjectInfo.Warnings, LReportedWarnings, 12);
 
     DoProgress('Ensuring MAP file...', 15);
-    LDeepEvidenceBuildResult := EnsureDeepEvidenceBuild(LProjectInfo);
+    try
+      LDeepEvidenceBuildResult := EnsureDeepEvidenceBuild(LProjectInfo);
+    except
+      on E: Exception do
+      begin
+        LDeepEvidenceBuildResult := Default(TDeepEvidenceBuildResult);
+        LDeepEvidenceBuildResult.Success := False;
+        LDeepEvidenceBuildResult.Message := 'Deep-Evidence build failed: ' + E.Message;
+      end;
+    end;
     if not LDeepEvidenceBuildResult.Success then
     begin
       DoProgress('Error: ' + LDeepEvidenceBuildResult.Message, -1);
