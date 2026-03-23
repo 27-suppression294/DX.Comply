@@ -59,11 +59,17 @@ begin
   begin
     if LArtefact.ArtefactType = 'unit-evidence' then
       Continue;
-    Lines.Add(Format('| %s | %s | %d | %s |', [
-      EscapeMarkdown(SafeText(LArtefact.RelativePath, LArtefact.FilePath)),
-      EscapeMarkdown(SafeText(LArtefact.ArtefactType)),
-      LArtefact.FileSize,
-      EscapeMarkdown(SafeText(LArtefact.Hash))]));
+    if LArtefact.FileSize >= 0 then
+      Lines.Add(Format('| %s | %s | %d | %s |', [
+        EscapeMarkdown(SafeText(LArtefact.RelativePath, LArtefact.FilePath)),
+        EscapeMarkdown(SafeText(LArtefact.ArtefactType)),
+        LArtefact.FileSize,
+        EscapeMarkdown(SafeText(LArtefact.Hash))]))
+    else
+      Lines.Add(Format('| %s | %s | n/a | %s |', [
+        EscapeMarkdown(SafeText(LArtefact.RelativePath, LArtefact.FilePath)),
+        EscapeMarkdown(SafeText(LArtefact.ArtefactType)),
+        EscapeMarkdown(SafeText(LArtefact.Hash))]));
   end;
   Lines.Add('');
 end;

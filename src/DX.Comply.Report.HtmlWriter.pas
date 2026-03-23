@@ -57,11 +57,17 @@ begin
   begin
     if LArtefact.ArtefactType = 'unit-evidence' then
       Continue;
-    Lines.Add(Format('<tr><td>%s</td><td>%s</td><td>%d</td><td><code>%s</code></td></tr>', [
-      EscapeHtml(SafeText(LArtefact.RelativePath, LArtefact.FilePath)),
-      EscapeHtml(SafeText(LArtefact.ArtefactType)),
-      LArtefact.FileSize,
-      EscapeHtml(SafeText(LArtefact.Hash))]));
+    if LArtefact.FileSize >= 0 then
+      Lines.Add(Format('<tr><td>%s</td><td>%s</td><td>%d</td><td><code>%s</code></td></tr>', [
+        EscapeHtml(SafeText(LArtefact.RelativePath, LArtefact.FilePath)),
+        EscapeHtml(SafeText(LArtefact.ArtefactType)),
+        LArtefact.FileSize,
+        EscapeHtml(SafeText(LArtefact.Hash))]))
+    else
+      Lines.Add(Format('<tr><td>%s</td><td>%s</td><td>n/a</td><td><code>%s</code></td></tr>', [
+        EscapeHtml(SafeText(LArtefact.RelativePath, LArtefact.FilePath)),
+        EscapeHtml(SafeText(LArtefact.ArtefactType)),
+        EscapeHtml(SafeText(LArtefact.Hash))]));
   end;
   Lines.Add('</tbody></table></div></section>');
 end;
