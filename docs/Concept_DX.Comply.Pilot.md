@@ -1,10 +1,10 @@
-# Konzept: CRAComply — CRA-Compliance-Begleiter
+# Konzept: DX.Comply Pilot — CRA-Compliance-Begleiter
 
 ## Vision
 
-**CRAComply** ist eine eigenstandige FMX-Anwendung innerhalb des DX.Comply-Projekts, die Software-Unternehmen als interaktiver Begleiter durch den gesamten EU Cyber Resilience Act (CRA) Compliance-Prozess fuehrt. Die SBOM-Generierung (DX.Comply Engine) ist dabei ein integrierter Baustein — der Wizard deckt den gesamten Compliance-Lebenszyklus ab.
+**DX.Comply Pilot** ist eine eigenstandige FMX-Anwendung innerhalb des DX.Comply-Projekts, die Software-Unternehmen als interaktiver Begleiter durch den gesamten EU Cyber Resilience Act (CRA) Compliance-Prozess fuehrt. Die SBOM-Generierung (DX.Comply Engine) ist dabei ein integrierter Baustein — der Wizard deckt den gesamten Compliance-Lebenszyklus ab.
 
-> **SBOM = ein Schritt von vielen.** CRAComply verwandelt abstrakte EU-Vorgaben in konkrete, erfassbare Arbeitsschritte und dokumentiert den Fortschritt nachvollziehbar.
+> **SBOM = ein Schritt von vielen.** DX.Comply Pilot verwandelt abstrakte EU-Vorgaben in konkrete, erfassbare Arbeitsschritte und dokumentiert den Fortschritt nachvollziehbar.
 
 ---
 
@@ -19,7 +19,7 @@
 ## Architektur-Ueberblick
 
 ```
-CRAComply (FMX Standalone App)
+DX.Comply Pilot (FMX Standalone App)
     |
     +-- Produkt-Klassifizierung (Wizard/Self-Assessment)
     |
@@ -78,7 +78,7 @@ Integration der bestehenden DX.Comply Engine:
 - **Externer DLL-Scan** (Source-Scan nach `external` und `LoadLibrary`)
 - **CycloneDX 1.5 / SPDX 2.3** Ausgabeformate
 
-**Bereits implementiert in DX.Comply v1.2.0.** CRAComply bindet die Engine als Package ein.
+**Bereits implementiert in DX.Comply v1.2.0.** DX.Comply Pilot bindet die Engine als Package ein.
 
 ---
 
@@ -94,7 +94,7 @@ Ein System zur Erfassung der fuer das "Technische Dossier" notwendigen Nachweise
 | **Support-Zusagen** | Datumsfelder + Validierung | End-of-Life Datum (automatische Pruefung der 5-Jahre-Regel) |
 | **Aenderungshistorie** | Automatisch via Git-Integration | Wann wurde was geaendert, wer hat es freigegeben |
 
-**Speicherung:** Alle Daten lokal im Projektverzeichnis als JSON (`.cracomply/`), Git-freundlich und versionierbar.
+**Speicherung:** Alle Daten lokal im Projektverzeichnis als JSON (`.dxcomply-pilot/`), Git-freundlich und versionierbar.
 
 ---
 
@@ -133,7 +133,7 @@ Per Knopfdruck werden alle erfassten Daten in formelle Dokumente exportiert:
 
 ## CRA-Compliance-Checkliste (integriert)
 
-CRAComply fuehrt den User durch diese Schritte und trackt den Fortschritt:
+DX.Comply Pilot fuehrt den User durch diese Schritte und trackt den Fortschritt:
 
 ### Produkt-Klassifizierung
 - [ ] Klassifizierung pruefen: Standard / Wichtig (Klasse I/II) / Kritisch
@@ -166,24 +166,24 @@ CRAComply fuehrt den User durch diese Schritte und trackt den Fortschritt:
 ```
 <projekt>/
   src/
-    CRAComply/
-      CRAComply.dproj            # FMX Standalone App
-      CRAComply.Main.Form.pas    # Hauptformular mit Navigation
-      CRAComply.Classification/   # Self-Assessment Wizard
-      CRAComply.Evidence/         # Evidence Collector
-      CRAComply.Vulnerability/    # CVE-Check, Dashboard
-      CRAComply.Reports/          # Report-Generierung
-      CRAComply.Project/          # Projektdaten, Persistence (.cracomply/)
+    DX.Comply Pilot/
+      DX.Comply Pilot.dproj            # FMX Standalone App
+      DX.Comply Pilot.Main.Form.pas    # Hauptformular mit Navigation
+      DX.Comply Pilot.Classification/   # Self-Assessment Wizard
+      DX.Comply Pilot.Evidence/         # Evidence Collector
+      DX.Comply Pilot.Vulnerability/    # CVE-Check, Dashboard
+      DX.Comply Pilot.Reports/          # Report-Generierung
+      DX.Comply Pilot.Project/          # Projektdaten, Persistence (.dxcomply-pilot/)
 ```
 
 ### Datenhaltung
-- **Lokal im Projektverzeichnis:** `.cracomply/` Ordner mit JSON-Dateien
+- **Lokal im Projektverzeichnis:** `.dxcomply-pilot/` Ordner mit JSON-Dateien
 - **Git-freundlich:** Keine Binaerdaten, alles Klartext und diffbar
 - **Portabel:** Kein Server, keine Cloud-Abhaengigkeit, keine Registrierung
 
 ### Engine-Integration
 - DX.Comply Engine Package wird referenziert (nicht kopiert)
-- `TDxComplyGenerator` wird direkt aus CRAComply aufgerufen
+- `TDxComplyGenerator` wird direkt aus DX.Comply Pilot aufgerufen
 - SBOM-Generierung als ein Schritt im Gesamtprozess
 
 ### Moegliche KI-Assistenz
