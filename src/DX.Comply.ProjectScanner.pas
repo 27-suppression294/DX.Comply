@@ -126,10 +126,16 @@ type
     /// </summary>
     procedure CopyUniqueValues(const ASource, ATarget: TList<string>);
     /// <summary>
-    /// Builds global Delphi library/source search roots for the detected toolchain.
+    /// Builds global Delphi library/source search roots for the detected toolchain,
+    /// including IDE Library Paths from the registry (third-party components).
     /// </summary>
     function BuildGlobalSearchPaths(const AToolchain: TDelphiToolchainInfo;
       AUsesDebugDCUs: Boolean): TList<string>;
+    /// <summary>
+    /// Reads the IDE Library Search Path from the Windows registry for the
+    /// given BDS version and platform (contains third-party component paths).
+    /// </summary>
+    function ReadIdeLibrarySearchPath(const ABdsVersion, APlatform: string): string;
     /// <summary>
     /// Detects the latest installed Delphi version from the registry.
     /// </summary>
@@ -552,12 +558,16 @@ function TProjectScanner.BuildGlobalSearchPaths(const AToolchain: TDelphiToolcha
 var
   LAlternateConfigDir: string;
   LBaseLibDir: string;
+  LIdeSearchPath: string;
+  LPathEntry: string;
   LPreferredConfigDir: string;
+  LResolvedPath: string;
 begin
   Result := TList<string>.Create;
   if Trim(AToolchain.RootDir) = '' then
     Exit;
 
+  // Delphi installation lib directories
   LBaseLibDir := TPath.Combine(AToolchain.RootDir, 'lib\' + FCurrentPlatform);
   if AUsesDebugDCUs then
   begin
@@ -574,6 +584,58 @@ begin
   AddExistingPath(LBaseLibDir, Result);
   AddExistingPath(LAlternateConfigDir, Result);
   AddExistingPath(TPath.Combine(AToolchain.RootDir, 'source'), Result);
+
+  // IDE Library Search Path from registry (third-party components)
+  LIdeSearchPath := ReadIdeLibrarySearchPath(AToolchain.Version, FCurrentPlatform);
+  if LIdeSearchPath <> '' then
+  begin
+    for LPathEntry in LIdeSearchPath.Split([';']) do
+    begin
+      LResolvedPath := Trim(LPathEntry);
+      if (LResolvedPath = '') or LResolvedPath.StartsWith('$') then
+        Continue;
+      AddExistingPath(LResolvedPath, Result);
+    end;
+  end;
+end;
+
+function TProjectScanner.ReadIdeLibrarySearchPath(
+  const ABdsVersion, APlatform: string): string;
+var
+  LRegistry: TRegistry;
+  LKeyPath: string;
+  procedure TryRead(ARootKey: HKEY; const AAccess: REGSAM);
+  begin
+    if Result <> '' then
+      Exit;
+
+    LRegistry.RootKey := ARootKey;
+    LRegistry.Access := KEY_READ or AAccess;
+    if not LRegistry.OpenKeyReadOnly(LKeyPath) then
+      Exit;
+    try
+      Result := Trim(LRegistry.ReadString('Search Path'));
+    finally
+      LRegistry.CloseKey;
+    end;
+  end;
+begin
+  Result := '';
+  if (ABdsVersion = '') or (APlatform = '') then
+    Exit;
+
+  LKeyPath := '\SOFTWARE\Embarcadero\BDS\' + ABdsVersion + '\Library\' + APlatform;
+  LRegistry := TRegistry.Create;
+  try
+    // IDE settings are typically stored in HKCU
+    TryRead(HKEY_CURRENT_USER, KEY_WOW64_32KEY);
+    TryRead(HKEY_CURRENT_USER, KEY_WOW64_64KEY);
+    // Fallback to HKLM
+    TryRead(HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY);
+    TryRead(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY);
+  finally
+    LRegistry.Free;
+  end;
 end;
 
 function TProjectScanner.DetectTargetedPlatforms: TArray<string>;
