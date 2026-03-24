@@ -1090,13 +1090,52 @@ begin
 end;
 
 function TProjectScanner.BuildExpectedMapFilePath(const AProjectInfo: TProjectInfo): string;
+var
+  LMapFileName: string;
+  LCandidate: string;
+  LCandidateDirs: TArray<string>;
+  LDir: string;
+  LBuildDir: string;
 begin
   Result := '';
-  if (AProjectInfo.OutputDir = '') or (AProjectInfo.ProjectName = '') then
+  if AProjectInfo.ProjectName = '' then
     Exit;
 
-  Result := TPath.Combine(AProjectInfo.OutputDir,
-    AProjectInfo.ProjectName + AProjectInfo.EffectiveMapSuffix + '.map');
+  LMapFileName := AProjectInfo.ProjectName + AProjectInfo.EffectiveMapSuffix + '.map';
+
+  // Build candidate directories in priority order:
+  // 1. Configured output directory (from .dproj)
+  // 2. Project directory (Delphi default when no output dir is configured)
+  // 3. Standard build structure relative to project (../build/Platform/Config)
+  // 4. BPL output directory (for packages)
+  LCandidateDirs := [];
+  if AProjectInfo.OutputDir <> '' then
+    LCandidateDirs := LCandidateDirs + [AProjectInfo.OutputDir];
+  if AProjectInfo.ProjectDir <> '' then
+    LCandidateDirs := LCandidateDirs + [AProjectInfo.ProjectDir];
+  if AProjectInfo.ProjectDir <> '' then
+  begin
+    LBuildDir := ResolveBuildPath('..\build\$(Platform)\$(Config)',
+      AProjectInfo.ProjectDir, AProjectInfo.ProjectName);
+    if LBuildDir <> '' then
+      LCandidateDirs := LCandidateDirs + [LBuildDir];
+  end;
+  if (AProjectInfo.BplOutputDir <> '') and
+     (AProjectInfo.BplOutputDir <> AProjectInfo.OutputDir) then
+    LCandidateDirs := LCandidateDirs + [AProjectInfo.BplOutputDir];
+
+  // Return the first candidate where the MAP file actually exists
+  for LDir in LCandidateDirs do
+  begin
+    LCandidate := TPath.Combine(LDir, LMapFileName);
+    if TFile.Exists(LCandidate) then
+      Exit(LCandidate);
+  end;
+
+  // No existing MAP file found — return the best candidate path so the
+  // Deep-Evidence build knows where to look after building
+  if Length(LCandidateDirs) > 0 then
+    Result := TPath.Combine(LCandidateDirs[0], LMapFileName);
 end;
 
 function TProjectScanner.Scan(const AProjectPath, APlatform, AConfiguration: string): TProjectInfo;
@@ -1203,10 +1242,10 @@ begin
 
     if Result.OutputDir = '' then
     begin
-      // Fallback to standard project structure
-      Result.OutputDir := ResolveBuildPath('..\build\$(Platform)\$(Config)',
-        Result.ProjectDir, Result.ProjectName);
-      FWarnings.Add('No output directory found in .dproj. Using default: ..\build\$(Platform)\$(Config)');
+      // Delphi's default: output goes to the project directory when no
+      // DCC_ExeOutput / DCC_BplOutput is specified in the .dproj.
+      Result.OutputDir := Result.ProjectDir;
+      FWarnings.Add('No output directory found in .dproj. Using project directory as default.');
     end;
 
     Result.DllSuffix := GetPropertyValue('DllSuffix', '');
