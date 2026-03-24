@@ -26,6 +26,7 @@ program dxcomply;
 {$R 'DX.Comply.CLI.res'}
 
 uses
+  DX.Comply.Locale.EN, // Must be first — forces English RTL messages
   System.SysUtils,
   System.IOUtils,
   DX.Comply.Engine,
