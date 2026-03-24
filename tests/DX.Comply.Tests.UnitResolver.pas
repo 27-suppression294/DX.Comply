@@ -97,6 +97,30 @@ type
     /// </summary>
     [Test]
     procedure Resolve_UnresolvedUnit_HasEmptyHashes;
+
+    /// <summary>
+    /// LLVM platforms without MAP evidence must discover units via uses-clause analysis.
+    /// </summary>
+    [Test]
+    procedure Resolve_LlvmPlatform_UsesClauseFallback;
+
+    /// <summary>
+    /// Classic platforms without MAP evidence must also fall back to uses-clause analysis.
+    /// </summary>
+    [Test]
+    procedure Resolve_ClassicPlatformNoMap_UsesClauseFallback;
+
+    /// <summary>
+    /// Classic platforms with MAP evidence must not invoke uses-clause fallback.
+    /// </summary>
+    [Test]
+    procedure Resolve_ClassicPlatformWithMap_NoUsesClauseFallback;
+
+    /// <summary>
+    /// IsClassicCompilerPlatform must return True only for Win32 and Win64.
+    /// </summary>
+    [Test]
+    procedure IsClassicCompilerPlatform_ClassifiesCorrectly;
   end;
 
 implementation
@@ -573,6 +597,187 @@ begin
     LBuildEvidence.Free;
     LProjectInfo.Free;
   end;
+end;
+
+procedure TUnitResolverTests.Resolve_LlvmPlatform_UsesClauseFallback;
+var
+  LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
+  LProjectInfo: TProjectInfo;
+  LTempDir: string;
+begin
+  LTempDir := TPath.Combine(TPath.GetTempPath, 'DXComplyResolverLlvm_' + TPath.GetRandomFileName);
+  TDirectory.CreateDirectory(LTempDir);
+  try
+    TFile.WriteAllText(TPath.Combine(LTempDir, 'MyApp.dpr'),
+      'program MyApp;' + sLineBreak +
+      'uses' + sLineBreak +
+      '  HelperUnit;' + sLineBreak +
+      'begin' + sLineBreak +
+      'end.');
+    TFile.WriteAllText(TPath.Combine(LTempDir, 'HelperUnit.pas'),
+      'unit HelperUnit;' + sLineBreak +
+      'interface' + sLineBreak +
+      'implementation' + sLineBreak +
+      'end.');
+
+    LProjectInfo := TProjectInfo.Create;
+    LBuildEvidence := TBuildEvidence.Create;
+    try
+      LProjectInfo.ProjectPath := TPath.Combine(LTempDir, 'MyApp.dproj');
+      LProjectInfo.ProjectDir := LTempDir;
+      LProjectInfo.Platform := 'iOSDevice64';
+      LProjectInfo.Configuration := 'Release';
+      LBuildEvidence.SearchPaths.Add(LTempDir);
+
+      LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
+      try
+        Assert.IsTrue(LCompositionEvidence.Units.Count > 0,
+          'LLVM platform without MAP evidence must discover units via uses-clause analysis');
+        Assert.AreEqual(besUsesClause, LCompositionEvidence.Units[0].EvidenceSources[0],
+          'Uses-clause-derived units must be tagged with besUsesClause');
+      finally
+        LCompositionEvidence.Free;
+      end;
+    finally
+      LBuildEvidence.Free;
+      LProjectInfo.Free;
+    end;
+  finally
+    if TDirectory.Exists(LTempDir) then
+      TDirectory.Delete(LTempDir, True);
+  end;
+end;
+
+procedure TUnitResolverTests.Resolve_ClassicPlatformNoMap_UsesClauseFallback;
+var
+  LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
+  LProjectInfo: TProjectInfo;
+  LTempDir: string;
+begin
+  LTempDir := TPath.Combine(TPath.GetTempPath, 'DXComplyResolverNoMap_' + TPath.GetRandomFileName);
+  TDirectory.CreateDirectory(LTempDir);
+  try
+    TFile.WriteAllText(TPath.Combine(LTempDir, 'MyApp.dpr'),
+      'program MyApp;' + sLineBreak +
+      'uses' + sLineBreak +
+      '  LocalUnit;' + sLineBreak +
+      'begin' + sLineBreak +
+      'end.');
+    TFile.WriteAllText(TPath.Combine(LTempDir, 'LocalUnit.pas'),
+      'unit LocalUnit;' + sLineBreak +
+      'interface' + sLineBreak +
+      'implementation' + sLineBreak +
+      'end.');
+
+    LProjectInfo := TProjectInfo.Create;
+    LBuildEvidence := TBuildEvidence.Create;
+    try
+      LProjectInfo.ProjectPath := TPath.Combine(LTempDir, 'MyApp.dproj');
+      LProjectInfo.ProjectDir := LTempDir;
+      LProjectInfo.Platform := 'Win32';
+      LProjectInfo.Configuration := 'Debug';
+      LBuildEvidence.SearchPaths.Add(LTempDir);
+
+      LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
+      try
+        Assert.IsTrue(LCompositionEvidence.Units.Count > 0,
+          'Classic platform without MAP evidence must also fall back to uses-clause analysis');
+      finally
+        LCompositionEvidence.Free;
+      end;
+    finally
+      LBuildEvidence.Free;
+      LProjectInfo.Free;
+    end;
+  finally
+    if TDirectory.Exists(LTempDir) then
+      TDirectory.Delete(LTempDir, True);
+  end;
+end;
+
+procedure TUnitResolverTests.Resolve_ClassicPlatformWithMap_NoUsesClauseFallback;
+var
+  LEvidenceItem: TBuildEvidenceItem;
+  LBuildEvidence: TBuildEvidence;
+  LCompositionEvidence: TCompositionEvidence;
+  LProjectInfo: TProjectInfo;
+  LTempDir: string;
+  LUnit: TResolvedUnitInfo;
+  LHasUsesClause: Boolean;
+begin
+  LTempDir := TPath.Combine(TPath.GetTempPath, 'DXComplyResolverMap_' + TPath.GetRandomFileName);
+  TDirectory.CreateDirectory(LTempDir);
+  try
+    // Create a .dpr that references ExtraUnit — should NOT be picked up
+    TFile.WriteAllText(TPath.Combine(LTempDir, 'MyApp.dpr'),
+      'program MyApp;' + sLineBreak +
+      'uses' + sLineBreak +
+      '  ExtraUnit;' + sLineBreak +
+      'begin' + sLineBreak +
+      'end.');
+    TFile.WriteAllText(TPath.Combine(LTempDir, 'ExtraUnit.pas'),
+      'unit ExtraUnit;' + sLineBreak +
+      'interface implementation end.');
+
+    LProjectInfo := TProjectInfo.Create;
+    LBuildEvidence := TBuildEvidence.Create;
+    try
+      LProjectInfo.ProjectPath := TPath.Combine(LTempDir, 'MyApp.dproj');
+      LProjectInfo.ProjectDir := LTempDir;
+      LProjectInfo.Platform := 'Win64';
+      LProjectInfo.Configuration := 'Release';
+      LBuildEvidence.SearchPaths.Add(LTempDir);
+
+      LEvidenceItem := Default(TBuildEvidenceItem);
+      LEvidenceItem.SourceKind := besMapFile;
+      LEvidenceItem.FilePath := TPath.Combine(LTempDir, 'MyApp.map');
+      LEvidenceItem.UnitName := 'MapUnit';
+      LBuildEvidence.EvidenceItems.Add(LEvidenceItem);
+
+      LCompositionEvidence := FResolver.Resolve(LProjectInfo, LBuildEvidence);
+      try
+        LHasUsesClause := False;
+        for LUnit in LCompositionEvidence.Units do
+          if (Length(LUnit.EvidenceSources) > 0) and (LUnit.EvidenceSources[0] = besUsesClause) then
+            LHasUsesClause := True;
+
+        Assert.IsFalse(LHasUsesClause,
+          'Classic platform with MAP evidence must not invoke uses-clause fallback');
+      finally
+        LCompositionEvidence.Free;
+      end;
+    finally
+      LBuildEvidence.Free;
+      LProjectInfo.Free;
+    end;
+  finally
+    if TDirectory.Exists(LTempDir) then
+      TDirectory.Delete(LTempDir, True);
+  end;
+end;
+
+procedure TUnitResolverTests.IsClassicCompilerPlatform_ClassifiesCorrectly;
+begin
+  Assert.IsTrue(TUnitResolver.IsClassicCompilerPlatform('Win32'),
+    'Win32 must be classified as classic compiler platform');
+  Assert.IsTrue(TUnitResolver.IsClassicCompilerPlatform('Win64'),
+    'Win64 must be classified as classic compiler platform');
+  Assert.IsFalse(TUnitResolver.IsClassicCompilerPlatform('iOSDevice64'),
+    'iOSDevice64 must be classified as LLVM platform');
+  Assert.IsFalse(TUnitResolver.IsClassicCompilerPlatform('Android'),
+    'Android must be classified as LLVM platform');
+  Assert.IsFalse(TUnitResolver.IsClassicCompilerPlatform('Android64'),
+    'Android64 must be classified as LLVM platform');
+  Assert.IsFalse(TUnitResolver.IsClassicCompilerPlatform('OSX64'),
+    'OSX64 must be classified as LLVM platform');
+  Assert.IsFalse(TUnitResolver.IsClassicCompilerPlatform('OSXARM64'),
+    'OSXARM64 must be classified as LLVM platform');
+  Assert.IsFalse(TUnitResolver.IsClassicCompilerPlatform('Linux64'),
+    'Linux64 must be classified as LLVM platform');
+  Assert.IsFalse(TUnitResolver.IsClassicCompilerPlatform('Win64x'),
+    'Win64x (ARM64) must be classified as LLVM platform');
 end;
 
 initialization

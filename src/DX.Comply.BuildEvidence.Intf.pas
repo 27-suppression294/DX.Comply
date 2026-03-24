@@ -40,6 +40,7 @@ type
     besDcpFile,
     besBplFile,
     besSearchPathFallback,
+    besUsesClause,
     besManualOverride
   );
 

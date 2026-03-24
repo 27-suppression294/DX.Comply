@@ -77,15 +77,33 @@ type
     /// </summary>
     function IsPathUnderDirectory(const APath, ABaseDirectory: string): Boolean;
     /// <summary>
+    /// Resolves a unit by searching build output, project and global paths.
+    /// Shared resolution logic used by both MAP-derived and uses-clause-derived evidence.
+    /// </summary>
+    function ResolveUnitBySearchPaths(const AProjectInfo: TProjectInfo;
+      const ABuildEvidence: TBuildEvidence; const AUnitName: string;
+      AEvidenceSource: TBuildEvidenceSourceKind): TResolvedUnitInfo;
+    /// <summary>
     /// Resolves one map-derived unit into richer composition evidence.
     /// </summary>
     function ResolveMapDerivedUnit(const AProjectInfo: TProjectInfo;
       const ABuildEvidence: TBuildEvidence; const AUnitName, AMapFilePath: string): TResolvedUnitInfo;
     /// <summary>
+    /// Adds uses-clause-derived units as fallback for LLVM platforms or missing MAP evidence.
+    /// </summary>
+    procedure AddUsesClauseDerivedUnits(const AProjectInfo: TProjectInfo;
+      const ABuildEvidence: TBuildEvidence;
+      var ACompositionEvidence: TCompositionEvidence);
+    /// <summary>
     /// Computes SHA-256 and SHA-512 hashes for the resolved file path.
     /// </summary>
     procedure ComputeHashes(var AResolvedUnit: TResolvedUnitInfo);
   public
+    /// <summary>
+    /// Returns True for classic-compiler platforms (Win32, Win64) that produce MAP files.
+    /// Returns False for LLVM platforms (iOS, Android, macOS, Linux, WinARM64).
+    /// </summary>
+    class function IsClassicCompilerPlatform(const APlatform: string): Boolean;
     constructor Create; overload;
     constructor Create(const AHashService: IHashService); overload;
     destructor Destroy; override;
@@ -102,7 +120,8 @@ uses
   System.IOUtils,
   System.DateUtils,
   System.StrUtils,
-  System.SysUtils;
+  System.SysUtils,
+  DX.Comply.UsesClauseParser;
 
 constructor TUnitResolver.Create;
 begin
@@ -114,6 +133,11 @@ constructor TUnitResolver.Create(const AHashService: IHashService);
 begin
   Create;
   FHashService := AHashService;
+end;
+
+class function TUnitResolver.IsClassicCompilerPlatform(const APlatform: string): Boolean;
+begin
+  Result := SameText(APlatform, 'Win32') or SameText(APlatform, 'Win64');
 end;
 
 procedure TUnitResolver.ComputeHashes(var AResolvedUnit: TResolvedUnitInfo);
@@ -368,8 +392,9 @@ begin
   end;
 end;
 
-function TUnitResolver.ResolveMapDerivedUnit(const AProjectInfo: TProjectInfo;
-  const ABuildEvidence: TBuildEvidence; const AUnitName, AMapFilePath: string): TResolvedUnitInfo;
+function TUnitResolver.ResolveUnitBySearchPaths(const AProjectInfo: TProjectInfo;
+  const ABuildEvidence: TBuildEvidence; const AUnitName: string;
+  AEvidenceSource: TBuildEvidenceSourceKind): TResolvedUnitInfo;
 var
   LCandidateFileNames: TArray<string>;
   LDirectSearchPaths: TList<string>;
@@ -380,8 +405,7 @@ begin
   Result := Default(TResolvedUnitInfo);
   Result.UnitName := AUnitName;
   Result.Confidence := rcStrong;
-  Result.ContainerPath := AMapFilePath;
-  Result.EvidenceSources := [besMapFile];
+  Result.EvidenceSources := [AEvidenceSource];
   LCandidateFileNames := BuildCandidateFileNames(AUnitName);
 
   for LExplicitReference in AProjectInfo.ExplicitUnitReferences do
@@ -395,7 +419,7 @@ begin
     Result.EvidenceKind := DetermineEvidenceKind(Result.ResolvedPath);
     Result.OriginKind := DetermineOriginKind(AProjectInfo, AUnitName, Result.ResolvedPath);
     Result.Confidence := rcAuthoritative;
-    Result.EvidenceSources := [besMapFile, besProjectMetadata];
+    Result.EvidenceSources := [AEvidenceSource, besProjectMetadata];
     Exit;
   end;
 
@@ -428,7 +452,7 @@ begin
         Result.Confidence := rcHeuristic
       else
         Result.Confidence := rcStrong;
-      Result.EvidenceSources := [besMapFile, besSearchPathFallback];
+      Result.EvidenceSources := [AEvidenceSource, besSearchPathFallback];
       Exit;
     end;
 
@@ -442,22 +466,82 @@ begin
         Result.Confidence := rcHeuristic
       else
         Result.Confidence := rcStrong;
-      Result.EvidenceSources := [besMapFile, besSearchPathFallback];
+      Result.EvidenceSources := [AEvidenceSource, besSearchPathFallback];
       Exit;
     end;
   finally
     LDirectSearchPaths.Free;
   end;
 
-  Result.EvidenceKind := uekMap;
+  Result.EvidenceKind := uekUnknown;
   Result.OriginKind := InferOriginFromUnitName(AProjectInfo, AUnitName);
   Result.Confidence := rcHeuristic;
   SetLength(Result.Warnings, 1);
-  Result.Warnings[0] := 'Could not resolve the unit beyond MAP-file membership.';
+  Result.Warnings[0] := 'Could not resolve unit file on disk.';
+end;
+
+function TUnitResolver.ResolveMapDerivedUnit(const AProjectInfo: TProjectInfo;
+  const ABuildEvidence: TBuildEvidence; const AUnitName, AMapFilePath: string): TResolvedUnitInfo;
+begin
+  Result := ResolveUnitBySearchPaths(AProjectInfo, ABuildEvidence, AUnitName, besMapFile);
+  Result.ContainerPath := AMapFilePath;
+  if (Result.ResolvedPath = '') and (Result.EvidenceKind = uekUnknown) then
+  begin
+    Result.EvidenceKind := uekMap;
+    if Length(Result.Warnings) > 0 then
+      Result.Warnings[0] := 'Could not resolve the unit beyond MAP-file membership.';
+  end;
+end;
+
+procedure TUnitResolver.AddUsesClauseDerivedUnits(const AProjectInfo: TProjectInfo;
+  const ABuildEvidence: TBuildEvidence;
+  var ACompositionEvidence: TCompositionEvidence);
+var
+  LRootSourcePath: string;
+  LDiscoveredUnits: TArray<string>;
+  LUnitName: string;
+  LExistingUnit: TResolvedUnitInfo;
+  LIsDuplicate: Boolean;
+  LResolvedUnit: TResolvedUnitInfo;
+begin
+  LRootSourcePath := ChangeFileExt(AProjectInfo.ProjectPath, '.dpr');
+  if not TFile.Exists(LRootSourcePath) then
+  begin
+    LRootSourcePath := ChangeFileExt(AProjectInfo.ProjectPath, '.dpk');
+    if not TFile.Exists(LRootSourcePath) then
+      Exit;
+  end;
+
+  LDiscoveredUnits := TUsesClauseWalker.WalkDependencies(LRootSourcePath,
+    ABuildEvidence.SearchPaths, AProjectInfo.GlobalSearchPaths,
+    ABuildEvidence.UnitScopeNames);
+
+  for LUnitName in LDiscoveredUnits do
+  begin
+    LIsDuplicate := False;
+    for LExistingUnit in ACompositionEvidence.Units do
+    begin
+      if SameText(LExistingUnit.UnitName, LUnitName) then
+      begin
+        LIsDuplicate := True;
+        Break;
+      end;
+    end;
+
+    if LIsDuplicate then
+      Continue;
+
+    LResolvedUnit := ResolveUnitBySearchPaths(AProjectInfo, ABuildEvidence,
+      LUnitName, besUsesClause);
+    ComputeHashes(LResolvedUnit);
+    ACompositionEvidence.Units.Add(LResolvedUnit);
+  end;
 end;
 
 function TUnitResolver.Resolve(const AProjectInfo: TProjectInfo;
   const ABuildEvidence: TBuildEvidence): TCompositionEvidence;
+var
+  LHasMapEvidence: Boolean;
 begin
   Result := TCompositionEvidence.Create;
   Result.ProjectName := AProjectInfo.ProjectName;
@@ -473,6 +557,10 @@ begin
   CopyUniqueWarnings(AProjectInfo.Warnings, Result.Warnings);
   CopyUniqueWarnings(ABuildEvidence.Warnings, Result.Warnings);
   AddMapDerivedUnits(AProjectInfo, ABuildEvidence, Result);
+
+  LHasMapEvidence := Result.Units.Count > 0;
+  if not LHasMapEvidence or not IsClassicCompilerPlatform(AProjectInfo.Platform) then
+    AddUsesClauseDerivedUnits(AProjectInfo, ABuildEvidence, Result);
 end;
 
 end.

@@ -82,6 +82,7 @@ begin
     besDcpFile: Result := 'DCP file';
     besBplFile: Result := 'BPL file';
     besSearchPathFallback: Result := 'Search path inference';
+    besUsesClause: Result := 'Uses-clause analysis';
     besManualOverride: Result := 'Manual override';
   else
     Result := 'Unknown';
