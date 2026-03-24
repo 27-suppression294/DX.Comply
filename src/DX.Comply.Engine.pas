@@ -918,7 +918,7 @@ begin
     // MAP file is located when automatic detection from the .dproj fails.
     if FConfig.MapFileDir <> '' then
       LProjectInfo.MapFilePath := TPath.Combine(FConfig.MapFileDir,
-        LProjectInfo.ProjectName + LProjectInfo.DllSuffix + '.map');
+        LProjectInfo.ProjectName + LProjectInfo.EffectiveMapSuffix + '.map');
   except
     on E: Exception do
     begin

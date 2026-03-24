@@ -1096,7 +1096,7 @@ begin
     Exit;
 
   Result := TPath.Combine(AProjectInfo.OutputDir,
-    AProjectInfo.ProjectName + AProjectInfo.DllSuffix + '.map');
+    AProjectInfo.ProjectName + AProjectInfo.EffectiveMapSuffix + '.map');
 end;
 
 function TProjectScanner.Scan(const AProjectPath, APlatform, AConfiguration: string): TProjectInfo;

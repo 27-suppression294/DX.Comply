@@ -108,7 +108,7 @@ type
     DcpOutputDir: string;
     /// <summary>Output directory for generated compiled units (.dcu).</summary>
     DcuOutputDir: string;
-    /// <summary>DllSuffix / LibSuffix appended to BPL and MAP file names.</summary>
+    /// <summary>DllSuffix / LibSuffix appended to package output file names (BPL, DCP, MAP).</summary>
     DllSuffix: string;
     /// <summary>Expected or resolved map file path for the selected build.</summary>
     MapFilePath: string;
@@ -134,6 +134,10 @@ type
     class function Create: TProjectInfo; static;
     /// <summary>Frees internal resources. Call this when done with the record.</summary>
     procedure Free;
+    /// <summary>Returns True when the project is a package (.dpk), False for applications (.dpr).</summary>
+    function IsPackage: Boolean;
+    /// <summary>Returns the effective suffix for MAP file names (DllSuffix for packages, empty for applications).</summary>
+    function EffectiveMapSuffix: string;
   end;
 
   /// <summary>
@@ -269,6 +273,10 @@ type
 
 implementation
 
+uses
+  System.IOUtils,
+  System.SysUtils;
+
 { TSbomProperty }
 
 class function TSbomProperty.Create(const AName, AValue: string): TSbomProperty;
@@ -334,6 +342,20 @@ begin
     Warnings.Free;
     Warnings := nil;
   end;
+end;
+
+function TProjectInfo.IsPackage: Boolean;
+begin
+  Result := (MainSourcePath <> '') and
+    SameText(TPath.GetExtension(MainSourcePath), '.dpk');
+end;
+
+function TProjectInfo.EffectiveMapSuffix: string;
+begin
+  if IsPackage then
+    Result := DllSuffix
+  else
+    Result := '';
 end;
 
 end.
