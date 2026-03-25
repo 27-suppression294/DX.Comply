@@ -505,6 +505,16 @@ begin
       for LMapUnitName in LMapUnitNames do
         AddEvidenceItem(Result, besMapFile, 'Unit from map file',
           AProjectInfo.MapFilePath, '', LMapUnitName, 'LineNumbersSection');
+
+      // MAP file exists but yields no unit entries — it is a segment-only or
+      // public-symbols MAP, not the detailed format DX.Comply requires.
+      // Emit an actionable warning so the user knows exactly what to change.
+      if Length(LMapUnitNames) = 0 then
+        Result.Warnings.Add(
+          'MAP file found but contains no unit information: ' +
+          AProjectInfo.MapFilePath + '. ' +
+          'Enable detailed MAP output (Project Options > Linker > Map file > Detailed)' +
+          ' or set DCC_MapFile=3 in the .dproj, then rebuild for full composition evidence.');
     end;
 
     if not TFile.Exists(AProjectInfo.MapFilePath) then

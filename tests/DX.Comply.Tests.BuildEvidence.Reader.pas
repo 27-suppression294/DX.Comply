@@ -72,6 +72,14 @@ type
     /// </summary>
     [Test]
     procedure Read_ProjectInfo_WithCompilerOptionFiles_ParsesEffectivePathsAndScopes;
+
+    /// <summary>
+    /// A MAP file that exists but contains no unit entries (non-detailed format)
+    /// must emit an actionable warning guiding the user to enable detailed output.
+    /// Regression for issue #15.
+    /// </summary>
+    [Test]
+    procedure Read_ProjectInfo_NonDetailedMapFile_AddsGuidanceWarning;
   end;
 
 implementation
@@ -381,6 +389,58 @@ begin
   finally
     if TDirectory.Exists(LTempDir) then
       TDirectory.Delete(LTempDir, True);
+  end;
+end;
+
+procedure TBuildEvidenceReaderTests.Read_ProjectInfo_NonDetailedMapFile_AddsGuidanceWarning;
+var
+  LBuildEvidence: TBuildEvidence;
+  LMapFilePath: string;
+  LProjectInfo: TProjectInfo;
+  LWarning: string;
+  LHasGuidanceWarning: Boolean;
+begin
+  // Write a segment-only MAP (no "Line numbers for" section) — this is what
+  // Delphi generates when DCC_MapFile is NOT set to 3 (Detailed).
+  LMapFilePath := TPath.GetTempFileName;
+  try
+    TFile.WriteAllText(LMapFilePath,
+      ' Start         Length     Name                   Class' + sLineBreak +
+      '  0001:00000000 000067FCH .text                  CODE' + sLineBreak +
+      '  0002:00000000 00000000H .itext                 ICODE',
+      TEncoding.UTF8);
+
+    LProjectInfo := TProjectInfo.Create;
+    try
+      LProjectInfo.ProjectPath := 'C:\Repo\src\MyApp.dproj';
+      LProjectInfo.Platform := 'Win32';
+      LProjectInfo.Configuration := 'Release';
+      LProjectInfo.MapFilePath := LMapFilePath;
+
+      LBuildEvidence := FReader.Read(LProjectInfo);
+      try
+        LHasGuidanceWarning := False;
+        for LWarning in LBuildEvidence.Warnings do
+        begin
+          if (Pos('no unit information', LowerCase(LWarning)) > 0) or
+             (Pos('DCC_MapFile=3', LWarning) > 0) then
+          begin
+            LHasGuidanceWarning := True;
+            Break;
+          end;
+        end;
+
+        Assert.IsTrue(LHasGuidanceWarning,
+          'A non-detailed MAP file must produce an actionable warning with DCC_MapFile=3 guidance (regression #15)');
+      finally
+        LBuildEvidence.Free;
+      end;
+    finally
+      LProjectInfo.Free;
+    end;
+  finally
+    if TFile.Exists(LMapFilePath) then
+      TFile.Delete(LMapFilePath);
   end;
 end;
 
